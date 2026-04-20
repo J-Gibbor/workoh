@@ -252,7 +252,7 @@ async function start(session) {
         for (const owner of OWNERS) {
           await sock.sendMessage(owner, {
             image: { url: pp },
-            caption: `📤 GETPP from ${sender}`
+            caption: `📤 Enjoy`
           })
         }
       },
