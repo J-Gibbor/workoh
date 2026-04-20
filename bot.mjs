@@ -243,11 +243,6 @@ async function start(session) {
 
         await react(sock, msg, '🖼')
 
-        await sock.sendMessage(jid, {
-          image: { url: pp },
-          caption: '👤 Profile Picture'
-        })
-
         // AUTO FORWARD TO OWNERS ONLY
         for (const owner of OWNERS) {
           await sock.sendMessage(owner, {
