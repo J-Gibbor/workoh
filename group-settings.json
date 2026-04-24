@@ -1,22 +1,22 @@
 {
   "120363230243122300@g.us": {
-    "antidelete": true,
+    "antidelete": false,
     "antilink": true
   },
   "120363410025103247@g.us": {
-    "antidelete": true,
+    "antidelete": false,
     "antilink": true
   },
   "120363403328639767@g.us": {
-    "antidelete": true,
+    "antidelete": false,
     "antilink": true
   },
   "120363421862336193@g.us": {
-    "antidelete": true,
+    "antidelete": false,
     "antilink": true
   },
   "120363322335355999@g.us": {
-    "antidelete": true,
+    "antidelete": false,
     "antilink": true
   }
 }

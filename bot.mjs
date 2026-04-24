@@ -8,12 +8,29 @@ import makeWASocket, {
 import pino from "pino"
 import fs from "fs"
 import qrcode from "qrcode-terminal"
+import express from "express"
 
 const logger = pino({ level: "silent" })
+const app = express()
+const PORT = 3000
+
+app.get("/", (req, res) => {
+  res.send("🤖 GibborLee Bot is running")
+})
+
+// optional health check route
+app.get("/health", (req, res) => {
+  res.json({ status: "ok", uptime: process.uptime() })
+})
+
+app.listen(PORT, () => {
+  console.log(`🌐 Server running on port ${PORT}`)
+})
 
 // ================= CONFIG =================
 const PREFIX = "."
 const WARN_LIMIT = 3
+
 
 const normalizeJid = (jid) =>
   jid.includes(":") ? jid.split(":")[0] + "@s.whatsapp.net" : jid
