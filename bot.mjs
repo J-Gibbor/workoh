@@ -50,40 +50,45 @@ async function start(session) {
     printQRInTerminal: false
   })
 
-  // ================= CONNECTION =================
-  sock.ev.on('connection.update', (u) => {
-
+sock.ev.on("connection.update", (u) => {
     if (u.qr) {
       console.log(`📱 QR - ${session}`)
       qrcode.generate(u.qr, { small: true })
     }
 
-    if (u.connection === 'open') {
+    if (u.connection === "open") {
       const botId = normalizeJid(sock.user.id)
 
-      if(!BOT_OWNERS.length) {
+      if (!BOT_OWNERS.length) {
         BOT_OWNERS.push(botId)
         saveOwners()
       }
+
       console.log("✅ Owner set:", botId)
       console.log(`✅ ${session} connected`)
     }
 
-    if (u.connection === 'close') {
-      if (u.lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut) {
+    if (u.connection === "close") {
+      if (
+        u.lastDisconnect?.error?.output?.statusCode !==
+        DisconnectReason.loggedOut
+      ) {
         start(session)
       }
     }
   })
 
-  sock.ev.on('creds.update', saveCreds)
+  sock.ev.on("creds.update", saveCreds)
+
+
 
   let warns = {}
 
   const react = (jid, key, emoji) =>
     sock.sendMessage(jid, { react: { text: emoji, key } })
 
-  // ================= EVENTS =================
+
+ // ================= EVENTS =================
   sock.ev.on("messages.upsert", async ({ messages }) => {
     const msg = messages[0]
     if (!msg.message || msg.key.fromMe) return
@@ -92,7 +97,6 @@ async function start(session) {
     const isGroup = jid.endsWith("@g.us")
     const sender = normalizeJid(msg.key.participant || msg.key.remoteJid)
     const isDM = !isGroup
-    
 
     const body =
       msg.message?.conversation ||
@@ -107,19 +111,22 @@ async function start(session) {
 
     // ================= GROUP META =================
     let groupAdmins = []
+
     if (isGroup) {
       const meta = await sock.groupMetadata(jid)
-      groupAdmins = meta.participants.filter(p => p.admin).map(p => p.id)
+      groupAdmins = meta.participants
+        .filter((p) => p.admin)
+        .map((p) => p.id)
     }
 
+    const isOwner = BOT_OWNERS.map(normalizeJid).includes(
+      normalizeJid(sender)
+    )
     const isAdmin = groupAdmins.includes(sender)
-    const isOwner = BOT_OWNERS.includes(normalizeJid(sender))
 
-  if (isDM) {
-  if (!isOwner) return // block non-owners
-
-  // allow owners to use ALL commands in DM
-}
+    // ================= SAFE DM CONTROL =================
+    // Only restrict NON-owners in DM
+    if (isDM && !isOwner) return
 
     const settings = getSettings(jid)
 
@@ -207,6 +214,7 @@ async function start(session) {
       }
     }
 
+
     // ================= COMMAND =================
     if (!body.startsWith(PREFIX)) return
 
@@ -291,7 +299,7 @@ async function start(session) {
 
       // ===== ADMIN =====
       kick: async () => {
-        if (!isOwner) return reply("Owner only")
+        if (!isOwner && !isAdmin) return reply("Owner only")
         const target = getTarget()
         if (!target) return reply("Mention user")
         await sock.groupParticipantsUpdate(jid, [target], "remove")
@@ -325,34 +333,46 @@ async function start(session) {
       },
 
       // ===== OWNER =====
-     addowner: async () => {
-  if (!isOwner) return reply("Owner only")
+  addowner: async () => {
+        if (!isOwner) return reply("Owner only")
 
-  const target = getTarget()
-  if (!target) return reply("Mention user")
+        const target = getTarget()
+        if (!target) return reply("Mention user")
 
-  const clean = normalizeJid(target)
+        const clean = normalizeJid(target)
 
-  if (!BOT_OWNERS.includes(clean)) {
-    BOT_OWNERS.push(clean)
-    saveOwners()
-    reply("✅ Owner added")
-  } else {
-    reply("⚠️ Already an owner")
-  }
-},
+        if (!BOT_OWNERS.includes(clean)) {
+          BOT_OWNERS.push(clean)
+          saveOwners()
+          reply("✅ Owner added")
+        } else {
+          reply("Already owner")
+        }
+      },
 
       delowner: async () => {
         if (!isOwner) return reply("Owner only")
+
         const target = getTarget()
-        BOT_OWNERS = BOT_OWNERS.filter(x => x !== target)
+        if (!target) return reply("Mention user")
+
+        const clean = normalizeJid(target)
+
+        BOT_OWNERS = BOT_OWNERS.filter(
+          (x) => normalizeJid(x) !== clean
+        )
+
         saveOwners()
         reply("❌ Owner removed")
       },
 
       owners: async () => {
-        reply("👑 Owners:\n" + BOT_OWNERS.map(o => "@" + o.split("@")[0]).join("\n"))
+        reply(
+          "👑 Owners:\n" +
+            BOT_OWNERS.map((o) => "@" + o.split("@")[0]).join("\n")
+        )
       },
+    
 
       // ===== TAG =====
       tagall: async () => {
@@ -406,56 +426,68 @@ whoami: async () => {
 },
 
       // ===== MENU =====
-      menu: async () => {
-        reply(`
-╭━━〔 🤖 BOT MENU 〕━━⬣
+menu: async () => {
+  reply(`
+╔══════════════════════╗
+║ 🤖  𝗚𝗜𝗕𝗕𝗢𝗥𝗟𝗘𝗘 𝗕𝗢𝗧 𝗠𝗘𝗡𝗨  ║
+╚══════════════════════╝
 
-┃ 🛡️ PROTECTION
-┃ • .antilink on/off — Block links
-┃ • .antidelete on/off — Restore deleted msgs
-┃ • .settings — View config
+🔥 𝗣𝗥𝗢𝗧𝗘𝗖𝗧𝗜𝗢𝗡
+━━━━━━━━━━━━━━━━━━
+🛡️ .antilink on/off   ➤ Block links
+🧠 .antidelete on/off  ➤ Restore deleted msgs
+⚙️ .settings           ➤ View bot settings
 
-┃ 🔐 GROUP CONTROL
-┃ • .lock — Admins only chat
-┃ • .unlock — Everyone can chat
-┃ • .kick — Remove user
-┃ • .promote — Make admin
-┃ • .demote — Remove admin
-┃ • .warn — Warn (3 = kick)
+👥 𝗚𝗥𝗢𝗨𝗣 𝗖𝗢𝗡𝗧𝗥𝗢𝗟
+━━━━━━━━━━━━━━━━━━
+🔒 .lock              ➤ Admin-only chat
+🔓 .unlock            ➤ Everyone can chat
+👢 .kick              ➤ Remove member
+⬆️ .promote           ➤ Promote admin
+⬇️ .demote            ➤ Demote admin
+⚠️ .warn              ➤ Warn user (3 = kick)
 
-┃ 📢 TAGGING
-┃ • .tagall — Mention all
-┃ • .hidetag — Hidden tag
+📢 𝗧𝗔𝗚 𝗙𝗘𝗔𝗧𝗨𝗥𝗘𝗦
+━━━━━━━━━━━━━━━━━━
+📣 .tagall            ➤ Mention everyone
+📌 .hidetag           ➤ Hidden tag message
 
-┃ 👁️ MEDIA (OWNER)
-┃ • .vv — Save view-once
-┃ • .pp — Get profile pic HD
+🎭 𝗠𝗘𝗗𝗜𝗔 𝗧𝗢𝗢𝗟𝗦
+━━━━━━━━━━━━━━━━━━
+👁️ .vv                ➤ Save view-once media
+🖼️ .pp                ➤ HD profile picture
 
-┃ 👑 OWNER
-┃ • .addowner — Add owner
-┃ • .delowner — Remove owner
-┃ • .owners — List owners
-┃ • .whoami — Show your JID
+👑 𝗢𝗪𝗡𝗘𝗥 𝗖𝗢𝗠𝗠𝗔𝗡𝗗𝗦
+━━━━━━━━━━━━━━━━━━
+➕ .addowner          ➤ Add bot owner
+➖ .delowner          ➤ Remove owner
+👑 .owners            ➤ Show all owners
+🆔 .whoami            ➤ Show your JID
 
-╰━━━━━━━━━━━━━━━━⬣
+━━━━━━━━━━━━━━━━━━
+💡 Powered by GibborLee Bot Engine
 `)
-      }
+}
     }
+  
+
+
 
     // ================= EXECUTION =================
-    if (commands[cmd]) {
+   if (commands[cmd]) {
       try {
         await react(jid, msg.key, "⏳")
         await commands[cmd]()
         await react(jid, msg.key, "✅")
       } catch (e) {
         console.log(e)
-        await react(jid, msg.key, "❌")
         reply("Error")
       }
     }
   })
 }
+
+
 
 // ================= MULTI SESSION =================
 ;["session1", "session2"].forEach(start)
