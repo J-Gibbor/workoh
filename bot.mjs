@@ -9,38 +9,22 @@ import pino from "pino"
 import fs from "fs"
 import qrcode from "qrcode-terminal"
 
+const logger = pino({ level: "silent" })
+
 // ================= CONFIG =================
 const PREFIX = "."
 const WARN_LIMIT = 3
-const logger = pino({ level: "silent" }) // Change to "info" for debugging
 
+const normalizeJid = (jid) =>
+  jid.includes(":") ? jid.split(":")[0] + "@s.whatsapp.net" : jid
 // ================= FILES =================
 const SETTINGS_FILE = "./group-settings.json"
 const STORE_FILE = "./msg-store.json"
 const OWNERS_FILE = "./owners.json"
 
-
 let GROUP_SETTINGS = fs.existsSync(SETTINGS_FILE) ? JSON.parse(fs.readFileSync(SETTINGS_FILE)) : {}
 let MSG_STORE = fs.existsSync(STORE_FILE) ? JSON.parse(fs.readFileSync(STORE_FILE)) : {}
-let BOT_OWNERS = [
-  "2347044625110@s.whatsapp.net",
-  "2349021540840@s.whatsapp.net"
-]
-
-try {
-  BOT_OWNERS = fs.existsSync(OWNERS_FILE)
-    ? JSON.parse(fs.readFileSync(OWNERS_FILE))
-    : []
-} catch {
-  BOT_OWNERS = []
-}
-
-// ✅ normalize ALL owners
-const normalizeJid = (jid = "") => {
-  if (!jid) return jid
-  return jid.split(":")[0].replace(/[^0-9]/g, "") + "@s.whatsapp.net"
-}
-BOT_OWNERS = BOT_OWNERS.map(normalizeJid)
+let BOT_OWNERS = fs.existsSync(OWNERS_FILE) ? JSON.parse(fs.readFileSync(OWNERS_FILE)) : []
 
 const saveSettings = () => fs.writeFileSync(SETTINGS_FILE, JSON.stringify(GROUP_SETTINGS, null, 2))
 const saveStore = () => fs.writeFileSync(STORE_FILE, JSON.stringify(MSG_STORE, null, 2))
@@ -75,20 +59,14 @@ async function start(session) {
     }
 
     if (u.connection === 'open') {
-      const self = normalizeJid(sock.user.id)
+      const botId = normalizeJid(sock.user.id)
 
-      // normalize JID (remove device part)
-      console.log(`✅ ${session} connected`)
-
-      // if no owners exist → auto set
-      if (BOT_OWNERS.includes(self)) {
-        BOT_OWNERS.push(self)
+      if(!BOT_OWNERS.length) {
+        BOT_OWNERS.push(botId)
         saveOwners()
-
-      console.log("✅ Owner auto-detected:", self)
-    } else {
-      console.log("ℹ️ Owners already set:", BOT_OWNERS)
-    }
+      }
+      console.log("✅ Owner set:", botId)
+      console.log(`✅ ${session} connected`)
     }
 
     if (u.connection === 'close') {
@@ -110,19 +88,11 @@ async function start(session) {
     const msg = messages[0]
     if (!msg.message || msg.key.fromMe) return
 
-  const jid = msg.key.remoteJid
-  const rawSender = msg.key.participant || msg.key.remoteJid
-  const sender = normalizeJid(rawSender)
-
-
-  const isOwner = BOT_OWNERS.includes(sender)
-  
-  const isGroup = jid.endsWith("@g.us")
-  const isDM = !isGroup
-  
-    // ✅ AFTER isOwner is defined
-  if (isDM && !isOwner) return // block non-owners in DM
-
+    const jid = msg.key.remoteJid
+    const isGroup = jid.endsWith("@g.us")
+    const sender = normalizeJid(msg.key.participant || msg.key.remoteJid)
+    const isDM = !isGroup
+    
 
     const body =
       msg.message?.conversation ||
@@ -143,10 +113,9 @@ async function start(session) {
     }
 
     const isAdmin = groupAdmins.includes(sender)
+    const isOwner = BOT_OWNERS.includes(normalizeJid(sender))
 
-
-    // 🔐 OWNER-ONLY DM ACCESS
-    if (isDM) {
+  if (isDM) {
   if (!isOwner) return // block non-owners
 
   // allow owners to use ALL commands in DM
@@ -279,7 +248,7 @@ async function start(session) {
           caption: "👁️ View-once recovered"
         })
 
-        reply("📩 Nice Dp")
+        reply("📩 Sent to your DM")
       },
 
       pp: async () => {
@@ -356,7 +325,7 @@ async function start(session) {
       },
 
       // ===== OWNER =====
-   addowner: async () => {
+     addowner: async () => {
   if (!isOwner) return reply("Owner only")
 
   const target = getTarget()
@@ -369,7 +338,7 @@ async function start(session) {
     saveOwners()
     reply("✅ Owner added")
   } else {
-    reply("⚠️ Already owner")
+    reply("⚠️ Already an owner")
   }
 },
 
@@ -384,11 +353,6 @@ async function start(session) {
       owners: async () => {
         reply("👑 Owners:\n" + BOT_OWNERS.map(o => "@" + o.split("@")[0]).join("\n"))
       },
-
-      whoami: async () => {
-  reply(`👤 Your JID:\n${sender}`)
-},
-
 
       // ===== TAG =====
       tagall: async () => {
@@ -437,17 +401,20 @@ unlock: async () => {
   }
 },
 
+whoami: async () => {
+  reply(`👤 Your JID:\n${sender}`)
+},
+
       // ===== MENU =====
       menu: async () => {
         reply(`
-╭━━〔 🤖 GIBBORLEE BOT MENU 〕━━⬣
+╭━━〔 🤖 BOT MENU 〕━━⬣
 
 ┃ 🛡️ PROTECTION
 ┃ • .antilink on/off — Block links
 ┃ • .antidelete on/off — Restore deleted msgs
 ┃ • .settings — View config
 
-┃ 👑 ADMIN
 ┃ 🔐 GROUP CONTROL
 ┃ • .lock — Admins only chat
 ┃ • .unlock — Everyone can chat
@@ -455,7 +422,6 @@ unlock: async () => {
 ┃ • .promote — Make admin
 ┃ • .demote — Remove admin
 ┃ • .warn — Warn (3 = kick)
-
 
 ┃ 📢 TAGGING
 ┃ • .tagall — Mention all
