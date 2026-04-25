@@ -21,6 +21,7 @@
     "fs": "^0.0.1-security",
     "glob": "^13.0.6",
     "jimp": "^1.6.1",
+    "mongoose": "^9.5.0",
     "node-fetch": "^3.3.2",
     "node-nlp": "^5.0.0-alpha.5",
     "node-telegram-bot-api": "^0.63.0",

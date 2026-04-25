@@ -22,64 +22,48 @@
   "120363427409948748@g.us": {
     "antidelete": false,
     "antilink": false,
-    "welcome": true,
-    "goodbye": true,
     "antistatus": true,
     "antistatus_mention": false
   },
   "120363223403280866@newsletter": {
     "antidelete": false,
     "antilink": false,
-    "welcome": true,
-    "goodbye": true,
     "antistatus": false,
     "antistatus_mention": false
   },
   "status@broadcast": {
     "antidelete": false,
     "antilink": false,
-    "welcome": true,
-    "goodbye": true,
     "antistatus": false,
     "antistatus_mention": false
   },
   "2347044625110@s.whatsapp.net": {
     "antidelete": false,
     "antilink": false,
-    "welcome": true,
-    "goodbye": true,
     "antistatus": false,
     "antistatus_mention": false
   },
   "120363398505112966@g.us": {
     "antidelete": false,
     "antilink": false,
-    "welcome": true,
-    "goodbye": true,
     "antistatus": false,
     "antistatus_mention": false
   },
   "120363423746343777@g.us": {
     "antidelete": false,
     "antilink": false,
-    "welcome": true,
-    "goodbye": true,
     "antistatus": false,
     "antistatus_mention": false
   },
   "120363364260039548@g.us": {
     "antidelete": false,
     "antilink": false,
-    "welcome": true,
-    "goodbye": true,
     "antistatus": false,
     "antistatus_mention": false
   },
   "193685962682432@lid": {
     "antidelete": false,
     "antilink": false,
-    "welcome": true,
-    "goodbye": true,
     "antistatus": false,
     "antistatus_mention": false
   }

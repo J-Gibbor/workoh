@@ -1,11 +1,10 @@
 import makeWASocket, {
   useMultiFileAuthState,
   fetchLatestBaileysVersion,
-  DisconnectReason,
   downloadContentFromMessage
 } from "@whiskeysockets/baileys"
 
-import pino from "pino"
+import pino, { levels } from "pino"
 import fs from "fs"
 import express from "express"
 import QRCode from "qrcode"
@@ -16,31 +15,57 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 const AUTH_FOLDER = path.join(__dirname, "auth")
 
-let CURRENT_QR = ""
 const app = express()
+const logger = pino({ level : "silent"})
 
 // Use host-provided port OR fallback to 3000
 const PORT = process.env.PORT || 3000
 
-app.get("/", (req, res) => {
-  if (!CURRENT_QR) {
-    return res.send("✅ Bot is connected and running")
-  }
+ let qrCount = 0
 
-  res.send(`
-    <h2>📱 Scan QR (Render)</h2>
-    <img src="${CURRENT_QR}" />
-  `)
+app.get("/", (req, res) => {
+  try {
+    if (!CURRENT_QR) {
+      return res.send("✅ Bot is connected and running")
+    }
+
+    res.send(`
+      <h2>📱 Scan QR</h2>
+      <img src="${CURRENT_QR}" />
+    `)
+  } catch {
+    res.send("Server error")
+  }
 })
 
-// 🔥 Prevent Render sleep (ping endpoint)
 app.get("/ping", (req, res) => res.send("alive"))
 
-const logger = pino({ level: "silent" })
+app.listen(PORT, () => {
+  console.log(`🌐 Server running on port ${PORT}`)
+})
+
+// ===== GLOBAL CRASH PROTECTION =====
+process.on("uncaughtException", (err) => {
+  console.log("🔥 Uncaught Exception:", err)
+})
+
+process.on("unhandledRejection", (err) => {
+  console.log("🔥 Unhandled Rejection:", err)
+})
+
+// ===== GLOBAL STATES =====
+let CURRENT_QR = ""
+let reconnecting = false
+let keepAliveStarted = false
 
 // ================= CONFIG =================
 const PREFIX = "."
 const WARN_LIMIT = 3
+const BOT_STATS = {
+  startTime: Date.now(),
+  messages: 0,
+  commands: 0
+}
 const COMMANDS = {
   antidelete: "🧠 Restore deleted messages automatically",
   antilink: "🔗 Delete messages containing links",
@@ -83,25 +108,36 @@ const COMMANDS = {
   delowner: "➖ Remove bot owner",
   owners: "👑 Show all bot owners",
 
-  whoami: "🆔 Show your WhatsApp JID"
+  whoami: "🆔 Show your WhatsApp JID",
+  stats: "📊 View bot uptime, message count, and command usage",
+  modes : "when set to private: 🔒 Owner only mode, when public: 🔘 Everyone can use bot ",
+  grouponly : "👥 Allow bot in groups only",dmblock : "📵 Disable bot in private chat",
 }
 
 const normalizeJid = (jid) =>
   jid.includes(":") ? jid.split(":")[0] + "@s.whatsapp.net" : jid
 // ================= FILES =================
-const SETTINGS_FILE = "./group-settings.json"
+const GROUP_SETTINGS_FILE = "./group-settings.json"
 const STORE_FILE = "./msg-store.json"
 const OWNERS_FILE = "./owners.json"
+const SETTINGS_FILE = "./settings.json"
 
-let GROUP_SETTINGS = fs.existsSync(SETTINGS_FILE) ? JSON.parse(fs.readFileSync(SETTINGS_FILE)) : {}
+let GROUP_SETTINGS = fs.existsSync(GROUP_SETTINGS_FILE) ? JSON.parse(fs.readFileSync(GROUP_SETTINGS_FILE)) : {}
+
+let SETTINGS = fs.existsSync(SETTINGS_FILE) ? JSON.parse(fs.readFileSync(SETTINGS_FILE)) : {}
+
 let MSG_STORE = fs.existsSync(STORE_FILE) ? JSON.parse(fs.readFileSync(STORE_FILE)) : {}
+
 let BOT_OWNERS = fs.existsSync(OWNERS_FILE) ? JSON.parse(fs.readFileSync(OWNERS_FILE)) : []
 
-const saveSettings = () => fs.writeFileSync(SETTINGS_FILE, JSON.stringify(GROUP_SETTINGS, null, 2))
+const saveGroupSettings = () => fs.writeFileSync(GROUP_SETTINGS_FILE, JSON.stringify(GROUP_SETTINGS, null, 2))
+
+const saveSettings = () => fs.writeFileSync(SETTINGS_FILE, JSON.stringify(SETTINGS, null, 2))
+
 const saveStore = () => fs.writeFileSync(STORE_FILE, JSON.stringify(MSG_STORE, null, 2))
 const saveOwners = () => fs.writeFileSync(OWNERS_FILE, JSON.stringify(BOT_OWNERS, null, 2))
 
-const getSettings = (jid) => {
+const getGroup_Settings = (jid) => {
   if (!GROUP_SETTINGS[jid]) {
     GROUP_SETTINGS[jid] = { 
       antidelete: false, 
@@ -113,69 +149,99 @@ const getSettings = (jid) => {
   return GROUP_SETTINGS[jid]
 }
 
+const getSettings = (jid) => {
+   if (!SETTINGS[jid]) {
+    SETTINGS[jid] = {
+      
+      mode: "private",
+      groupOnly: false,
+      dmDisabled: false
+    }
+  }
+    return SETTINGS[jid]
+  }
+
+
 // ================= START =================
 async function start(session) {
+  try {
+    const { state, saveCreds } = await useMultiFileAuthState(`${AUTH_FOLDER}/${session}`)
+    const { version } = await fetchLatestBaileysVersion()
 
-  const { state, saveCreds } = await useMultiFileAuthState(`${AUTH_FOLDER}/${session}`)
-  const { version } = await fetchLatestBaileysVersion()
-let currentQR = ""
+    const sock = makeWASocket({
+      version,
+      auth: state,
+      logger,
+      printQRInTerminal: false,
+      markOnlineOnConnect: true,
+      browser: ["Chrome (Linux)", "Chrome", "120.0.0"],
 
-  const sock = makeWASocket({
-    version,
-    auth: state,
-    logger,
-    printQRInTerminal: false,
-    markOnlineOnConnect: true,
-    syncFullHistory: false,
-    browser: ["Chrome (Linux)", "Chrome", "120.0.0"]
-  })
+        // 🔥 stability boost
+  connectTimeoutMs: 60000,
+  keepAliveIntervalMs: 25000,
+  defaultQueryTimeoutMs: 60000
+
+    })
 
     sock.ev.on("creds.update", saveCreds)
 
-sock.ev.on("connection.update", async (u) => {
-  const { connection, qr, lastDisconnect } = u
+    // ===== CONNECTION HANDLER =====
+    sock.ev.on("connection.update", async (u) => {
+      const { connection, qr, lastDisconnect } = u
 
-  // ===== QR GENERATION =====
-  if (qr) {
-    CURRENT_QR = await QRCode.toDataURL(qr)
-    console.log("📱 QR READY (Render Web)")
+      if (qr) {
+        qrCount++
+  if (qrCount > 6) {
+    console.log("❌ Too many QR attempts, restarting clean session...")
+    process.exit(1)
   }
+        CURRENT_QR = await QRCode.toDataURL(qr)
+        console.log("📱 QR READY")
+      }
 
-  // ===== CONNECTED =====
-  if (connection === "open") {
-    CURRENT_QR = ""
+      if (connection === "open") {
+        CURRENT_QR = ""
+        reconnecting = false
 
-    console.log("✅ GibborLee connected on Render")
+        console.log("✅ Bot connected")
 
-    const botId = normalizeJid(sock.user.id)
+        const botId = normalizeJid(sock.user.id)
 
-    if (!BOT_OWNERS.length) {
-      BOT_OWNERS.push(botId)
-      saveOwners()
+        if (!BOT_OWNERS.length) {
+          BOT_OWNERS.push(botId)
+          saveOwners()
+        }
+
+        console.log("🤖 Logged in as:", botId)
+
+        // ✅ PREVENT MULTIPLE INTERVALS
+        if (!keepAliveStarted) {
+          keepAliveStarted = true
+          setInterval(() => {
+            try {
+              sock.sendPresenceUpdate("available")
+            } catch {}
+          }, 20000)
+        }
+      }
+
+      if (connection === "close") {
+         const statusCode = lastDisconnect?.error?.output?.statusCode
+
+    console.log("❌ Disconnected:", statusCode)
+
+    // ❌ Logged out (DO NOT reconnect)
+    if (statusCode === 401 || statusCode === 405) {
+      console.log("⚠️ Logged out → delete auth folder")
+      return
     }
 
-    console.log("🤖 Connected as:", botId)
+    // 🔄 Safe reconnect
+    console.log("🔄 Reconnecting safely in 5s...")
+    setTimeout(() => start(session), 5000)
+      }
+    })
 
-    // 🔥 KEEP ALIVE (VERY IMPORTANT)
-    setInterval(() => {
-      sock.sendPresenceUpdate("available")
-    }, 20000)
-  }
-
-  // ===== DISCONNECTED =====
-  if (connection === "close") {
-    const reason = lastDisconnect?.error?.output?.statusCode
-
-    console.log("❌ Disconnected:", reason)
-
-    if (reason !== DisconnectReason.loggedOut) {
-      console.log("🔄 Reconnecting...")
-      start(session)
-    } else {
-      console.log("⚠️ Logged out. Delete auth folder.")
-    }
-  }
-})
 
 
   let warns = {}
@@ -190,13 +256,17 @@ sock.ev.on("connection.update", async (u) => {
     const msg = messages[0]
     if (!msg.message) return
     
-
+    BOT_STATS.messages++
     const jid = msg.key.remoteJid || ""
     const isBot = msg.key.fromMe
     const isGroup = jid.includes("@g.us")
     const sender = normalizeJid(msg.key.participant || msg.key.remoteJid)
     const isDM = !isGroup
     const settings = getSettings(jid || "default")
+    const group_settings = getGroup_Settings(jid || "default")
+
+    if (settings.groupOnly && !isGroup) return
+    if (settings.dmDisabled && !isGroup) return
 
 const body =
   msg.message?.conversation ||
@@ -212,7 +282,7 @@ const body =
       msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0]
 
     // ================= ANTI STATUS =================
-if (settings.antistatus || settings.antistatus_mention) {
+if (group_settings.antistatus || group_settings.antistatus_mention) {
   try {
     const msgType = msg.message
 
@@ -221,12 +291,12 @@ if (settings.antistatus || settings.antistatus_mention) {
 
     if (isStatus) {
       // delete status view
-      if (settings.antistatus) {
+      if (group_settings.antistatus) {
         await sock.readMessages([msg.key])
       }
 
       // handle mentions inside status
-      if (settings.antistatus_mention) {
+      if (group_settings.antistatus_mention) {
         const text =
           msg.message?.extendedTextMessage?.text ||
           msg.message?.conversation ||
@@ -273,12 +343,36 @@ if (isDM) {
 }
 
     // ================= SAVE MESSAGE =================
-    MSG_STORE[msg.key.id] = {
-      message: msg.message,
-      sender,
-      chat: jid
-    }
-    saveStore()
+    // ===== LIGHTWEIGHT MESSAGE STORE (ANTI-MEMORY LEAK) =====
+    const MAX_STORE = 5000
+
+    sock.ev.on("messages.upsert", async ({ messages }) => {
+      try {
+        const msg = messages[0]
+        if (!msg.message) return
+
+        const jid = msg.key.remoteJid || ""
+        const sender = normalizeJid(msg.key.participant || jid)
+
+        // ===== SAFE STORE LIMIT =====
+        if (Object.keys(MSG_STORE).length > MAX_STORE) {
+          MSG_STORE = {} // reset to prevent memory crash
+        }
+
+        MSG_STORE[msg.key.id] = {
+          message: msg.message,
+          sender,
+          chat: jid
+        }
+
+        // 💡 SAVE LESS FREQUENTLY (reduce disk load)
+        if (Math.random() < 0.1) saveStore()
+
+      } catch (e) {
+        console.log("Message handler error:", e)
+      }
+    })
+    
 
     // ================= VIEW-ONCE AUTO SAVE =================
     const vmsg =
@@ -312,7 +406,7 @@ if (isDM) {
     }
 
     // ================= ANTI DELETE =================
-    if (settings.antidelete) {
+    if (group_settings.antidelete) {
       const proto = msg.message?.protocolMessage
       if (proto?.type === 0) {
         const original = MSG_STORE[proto.key.id]
@@ -335,7 +429,7 @@ if (isDM) {
     }
 
     // ================= ANTI LINK =================
-   if (isGroup && settings.antilink && body) {
+   if (isGroup && group_settings.antilink && body) {
   const links = ["http", "wa.me", ".com", ".net", "chat.whatsapp.com"]
 
   if (links.some(l => body.toLowerCase().includes(l))) {
@@ -366,8 +460,23 @@ if (isBot && !BOT_OWNERS.includes(sender)) return
     const args = body.slice(1).trim().split(/ +/)
     const cmd = args.shift().toLowerCase()
 
+    const botMode = settings.mode || "private"
+if (botMode === "private" && !isOwner) return
+
+
+// 👥 GROUP ONLY MODE
+if (settings.groupOnly && !isGroup) {
+  return // blocks all DM usage
+}
+
+// 📵 DM BLOCK MODE
+if (settings.dmDisabled && !isGroup) {
+  return // blocks all DM messages completely
+}
+    
     const commands = {
 
+      
       // ===== MEDIA =====
       vv: async () => {
   if (!isOwner) return reply("Owner only")
@@ -432,19 +541,19 @@ if (isBot && !BOT_OWNERS.includes(sender)) return
       antidelete: async () => {
         if (!isAdmin && !isOwner) return reply("❌ Admin only")
         settings.antidelete = args[0] === "on"
-        saveSettings()
+        saveGroupSettings()
         reply(`🧠 Anti-delete ${settings.antidelete ? "ON" : "OFF"}`)
       },
 
       antilink: async () => {
         if (!isAdmin && !isOwner) return reply("❌ Admin only")
-        settings.antilink = args[0] === "on"
-        saveSettings()
-        reply(`🔗 Anti-link ${settings.antilink ? "ON" : "OFF"}`)
+        group_settings.antilink = args[0] === "on"
+        saveGroupSettings()
+        reply(`🔗 Anti-link ${group_settings.antilink ? "ON" : "OFF"}`)
       },
 
       settings: async () => {
-        reply(`⚙️ SETTINGS\nAntiDelete: ${settings.antidelete}\nAntiLink: ${settings.antilink}`)
+        reply(`⚙️ SETTINGS\nAntiDelete: ${group_settings.antidelete}\nAntiLink: ${group_settings.antilink} \nBot Mode: ${settings.mode} \nGroupOnly: ${settings.groupOnly} \ndmDisabled: ${settings.dmDisabled}`)
       },
 
       // ===== ADMIN =====
@@ -553,6 +662,28 @@ if (isBot && !BOT_OWNERS.includes(sender)) return
             BOT_OWNERS.map((o) => "@" + o.split("@")[0]).join("\n")
         )
       },
+
+      // ===== BOT MODE =====
+
+      mode: async () => {
+  if (!isOwner) return reply("❌ Owner only")
+
+  const current = settings.mode || "private"
+  const newMode = args[0]?.toLowerCase()
+
+  if (!newMode) {
+    return reply(`🤖 Current mode: ${current}\n\nUse:\n.mode public\n.mode private`)
+  }
+
+  if (newMode !== "public" && newMode !== "private") {
+    return reply("❌ Use: .mode public OR .mode private")
+  }
+
+  settings.mode = newMode
+  save()
+
+  reply(`✅ Bot mode changed to: *${newMode.toUpperCase()}*`)
+},
 
       // ===== TAG =====
      tageveryone: async () => {
@@ -900,20 +1031,20 @@ antistatus: async () => {
   if (!isGroup) return reply("❌ Group only")
   if (!isAdmin && !isOwner) return reply("❌ Admin only")
 
-  settings.antistatus = args[0] === "on"
-  saveSettings()
+  group_settings.antistatus = args[0] === "on"
+  saveGroupSettings()
 
-  reply(`🚫 Anti-status ${settings.antistatus ? "ON" : "OFF"}`)
+  reply(`🚫 Anti-status ${group_settings.antistatus ? "ON" : "OFF"}`)
 },
 
 antistatusmention: async () => {
   if (!isGroup) return reply("❌ Group only")
   if (!isAdmin && !isOwner) return reply("❌ Admin only")
 
-  settings.antistatus_mention = args[0] === "on"
-  saveSettings()
+  group_settings.antistatus_mention = args[0] === "on"
+  saveGroupSettings()
 
-  reply(`📢 Anti-status mention ${settings.antistatus_mention ? "ON" : "OFF"}`)
+  reply(`📢 Anti-status mention ${group_settings.antistatus_mention ? "ON" : "OFF"}`)
 },
 
 delete: async () => {
@@ -963,6 +1094,63 @@ del: async () => {
   }
 },
 
+stats: async () => {
+  if (!isOwner) return reply("❌ Owner only")
+
+  const uptime = Date.now() - BOT_STATS.startTime
+  const seconds = Math.floor(uptime / 1000)
+  const minutes = Math.floor(seconds / 60)
+  const hours = Math.floor(minutes / 60)
+
+  reply(`
+🤖 GIBBORLEE BOT STATS
+
+⏱️ Uptime: ${hours}h ${minutes % 60}m ${seconds % 60}s
+💬 Messages: ${BOT_STATS.messages}
+⚡ Commands used: ${BOT_STATS.commands}
+
+📊 Status: ACTIVE
+`)
+},
+
+grouponly: async () => {
+  if (!isOwner) return reply("❌ Owner only")
+
+  const value = args[0]?.toLowerCase()
+
+  if (!value) {
+    return reply(`👥 Group-only mode is currently: ${settings.groupOnly ? "ON" : "OFF"}`)
+  }
+
+  if (value !== "on" && value !== "off") {
+    return reply("Use: .grouponly on/off")
+  }
+
+  settings.groupOnly = value === "on"
+  saveSettings()
+
+  reply(`👥 Group-only mode: ${settings.groupOnly ? "ON" : "OFF"}`)
+},
+
+dmblock: async () => {
+  if (!isOwner) return reply("❌ Owner only")
+
+  const value = args[0]?.toLowerCase()
+
+  if (!value) {
+    return reply(`📵 DM block is currently: ${settings.dmDisabled ? "ON" : "OFF"}`)
+  }
+
+  if (value !== "on" && value !== "off") {
+    return reply("Use: .dmblock on/off")
+  }
+
+  settings.dmDisabled = value === "on"
+  saveSettings()
+
+  reply(`📵 DM block: ${settings.dmDisabled ? "ON" : "OFF"}`)
+},
+
 whoami: async () => {
   reply(`👤 Your JID:\n${sender}`)
 },
@@ -993,6 +1181,7 @@ menu: async () => {
 • tag
 • media
 • owner
+• modes
 • info
 `
 
@@ -1018,7 +1207,8 @@ menu: async () => {
     join: ["approve", "approveall", "reject"],
     tag: ["tagall", "hidetag", "tagonline"],
     media: ["vv", "pp"],
-    owner: ["addowner", "delowner", "owners"],
+    owner: ["addowner", "delowner", "owners", "stats"],
+    modes: ["mode private", "mode public" ,"grouponly on/off", "dmblock" ],
     info: ["whoami"]
   }
 
@@ -1039,10 +1229,11 @@ menu: async () => {
 
     // ================= EXECUTION =================
    if (commands[cmd]) {
-      try {
-        await react(jid, msg.key, "⏳")
-        await commands[cmd]()
-        await react(jid, msg.key, "✅")
+     try {
+       await react(jid, msg.key, "⏳")
+       await commands[cmd]()
+       BOT_STATS.commands++
+       await react(jid, msg.key, "✅")
       } catch (e) {
         console.log(e)
         await react(jid, msg.key, "❌")
@@ -1056,7 +1247,16 @@ app.listen(PORT, () => {
 })
 
 return sock
+} catch (err) {
+    console.log("🔥 Start error:", err)
+
+    if (!reconnecting) {
+      reconnecting = true
+      setTimeout(() => start(session), 5000)
+    }
+
+}
 }
 
-// ================= MULTI SESSION =================
+// =================  SESSION =================
 ;["session1", "session2"].forEach(start)
