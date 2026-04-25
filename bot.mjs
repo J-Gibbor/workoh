@@ -7,8 +7,8 @@ import makeWASocket, {
 
 import pino from "pino"
 import fs from "fs"
-import qrcode from "qrcode-terminal"
 import express from "express"
+import QRCode from "qrcode"
 
 const app = express()
 
@@ -16,12 +16,18 @@ const app = express()
 const PORT = process.env.PORT || 3000
 
 app.get("/", (req, res) => {
-  res.send("🤖 GibborLee Bot is LIVE")
+  if (!CURRENT_QR) {
+    return res.send("✅ GibborLee Bot is already connected to WhatsApp Web")
+  }
+
+  res.send(`
+    <h2>📱 Scan QR (WhatsApp Web)</h2>
+    <img src="${CURRENT_QR}" />
+    <p>Open WhatsApp → Linked Devices → Link Device</p>
+  `)
 })
 
-app.get("/health", (req, res) => {
-  res.send("OK")
-})
+app.get("/health", (req, res) => res.send("OK"))
 
 app.listen(PORT, () => {
   console.log(`🌐 Server running on port ${PORT}`)
@@ -109,6 +115,7 @@ async function start(session) {
 
   const { state, saveCreds } = await useMultiFileAuthState(`auth/${session}`)
   const { version } = await fetchLatestBaileysVersion()
+let currentQR = ""
 
   const sock = makeWASocket({
     version,
@@ -117,50 +124,45 @@ async function start(session) {
     printQRInTerminal: false,
     markOnlineOnConnect: true,
     syncFullHistory: false,
-    browser: ["GibborLee", "Chrome", "1.0.0"]
+    browser: ["Chrome (Linux)", "Chrome", "120.0.0"]
   })
 
-sock.ev.on("connection.update", (u) => {
-    if (u.qr) {
-      console.log(`📱 QR - ${session}`)
-      qrcode.generate(u.qr, { small: true })
+sock.ev.on("connection.update", async (u) => {
+    const { connection, qr, lastDisconnect } = u
+
+    if (qr) {
+      CURRENT_QR = await QRCode.toDataURL(qr)
+      console.log(`📱 Scan QR at http://localhost:${PORT}`)
     }
 
-   if (u.connection === "open") {
-          const botId = normalizeJid(sock.user.id)
+    if (connection === "open") {
+      CURRENT_QR = ""
+
+      const botId = normalizeJid(sock.user.id)
 
       if (!BOT_OWNERS.length) {
         BOT_OWNERS.push(botId)
         saveOwners()
       }
 
-      const botName = "GibborLee"
+      console.log("🤖 GibborLee connected as:", botId)
 
-      console.log(`🤖 ${botName} is now online`)
-      console.log("📌 Bot ID:", botId)
+      setTimeout(() => {
+        sock.sendPresenceUpdate("available")
+      }, 3000)
+    }
 
-      console.log("✅ Owner set:", botId)
-      console.log(`✅ ${session} connected`)
+    if (connection === "close") {
+      const reason = lastDisconnect?.error?.output?.statusCode
 
-
-    // SAFE NOW
-    setTimeout(() => {
-      sock.sendPresenceUpdate("available")
-    }, 3000)
-  }
-
-    if (u.connection === "close") {
-      if (
-        u.lastDisconnect?.error?.output?.statusCode !==
-        DisconnectReason.loggedOut
-      ) {
+      if (reason !== DisconnectReason.loggedOut) {
+        console.log("🔄 Reconnecting...")
         start(session)
+      } else {
+        console.log("❌ Logged out. Delete auth folder.")
       }
     }
   })
-
-  sock.ev.on("creds.update", saveCreds)
-
 
   let warns = {}
 
