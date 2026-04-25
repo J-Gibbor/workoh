@@ -9,6 +9,12 @@ import pino from "pino"
 import fs from "fs"
 import express from "express"
 import QRCode from "qrcode"
+import path from "path"
+import { fileURLToPath } from "url"
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
+const AUTH_FOLDER = path.join(__dirname, "auth")
 
 let CURRENT_QR = ""
 const app = express()
@@ -18,21 +24,17 @@ const PORT = process.env.PORT || 3000
 
 app.get("/", (req, res) => {
   if (!CURRENT_QR) {
-    return res.send("✅ GibborLee Bot is already connected to WhatsApp Web")
+    return res.send("✅ Bot is connected and running")
   }
 
   res.send(`
-    <h2>📱 Scan QR (WhatsApp Web)</h2>
+    <h2>📱 Scan QR (Render)</h2>
     <img src="${CURRENT_QR}" />
-    <p>Open WhatsApp → Linked Devices → Link Device</p>
   `)
 })
 
-app.get("/health", (req, res) => res.send("OK"))
-
-app.listen(PORT, () => {
-  console.log(`🌐 Server running on port ${PORT}`)
-})
+// 🔥 Prevent Render sleep (ping endpoint)
+app.get("/ping", (req, res) => res.send("alive"))
 
 const logger = pino({ level: "silent" })
 
@@ -114,7 +116,7 @@ const getSettings = (jid) => {
 // ================= START =================
 async function start(session) {
 
-  const { state, saveCreds } = await useMultiFileAuthState(`auth/${session}`)
+  const { state, saveCreds } = await useMultiFileAuthState(`${AUTH_FOLDER}/${session}`)
   const { version } = await fetchLatestBaileysVersion()
 let currentQR = ""
 
@@ -128,44 +130,54 @@ let currentQR = ""
     browser: ["Chrome (Linux)", "Chrome", "120.0.0"]
   })
 
+    sock.ev.on("creds.update", saveCreds)
+
 sock.ev.on("connection.update", async (u) => {
-    const { connection, qr, lastDisconnect } = u
+  const { connection, qr, lastDisconnect } = u
 
-    if (qr) {
-      CURRENT_QR = await QRCode.toDataURL(qr)
-      console.log(`📱 Scan QR at http://localhost:${PORT}`)
-    }
-
-    if (connection === "open") {
-      CURRENT_QR = ""
-
-      const botId = normalizeJid(sock.user.id)
-
-      if (!BOT_OWNERS.length) {
-        BOT_OWNERS.push(botId)
-        saveOwners()
-      }
-
-      console.log("🤖 GibborLee connected as:", botId)
-
-setInterval(() => {
-  sock.sendPresenceUpdate("available")
-}, 20000)
-
-   if (connection === "close") {
-  const reason = lastDisconnect?.error?.output?.statusCode
-
-  console.log("Disconnected:", reason)
-
-  if (reason !== DisconnectReason.loggedOut) {
-    start(session)
-  } else {
-    console.log("❌ Session expired. Delete auth/ and re-scan.")
+  // ===== QR GENERATION =====
+  if (qr) {
+    CURRENT_QR = await QRCode.toDataURL(qr)
+    console.log("📱 QR READY (Render Web)")
   }
-}
+
+  // ===== CONNECTED =====
+  if (connection === "open") {
+    CURRENT_QR = ""
+
+    console.log("✅ GibborLee connected on Render")
+
+    const botId = normalizeJid(sock.user.id)
+
+    if (!BOT_OWNERS.length) {
+      BOT_OWNERS.push(botId)
+      saveOwners()
     }
-    
-  })
+
+    console.log("🤖 Connected as:", botId)
+
+    // 🔥 KEEP ALIVE (VERY IMPORTANT)
+    setInterval(() => {
+      sock.sendPresenceUpdate("available")
+    }, 20000)
+  }
+
+  // ===== DISCONNECTED =====
+  if (connection === "close") {
+    const reason = lastDisconnect?.error?.output?.statusCode
+
+    console.log("❌ Disconnected:", reason)
+
+    if (reason !== DisconnectReason.loggedOut) {
+      console.log("🔄 Reconnecting...")
+      start(session)
+    } else {
+      console.log("⚠️ Logged out. Delete auth folder.")
+    }
+  }
+})
+}
+
 
   let warns = {}
 
@@ -1039,10 +1051,10 @@ menu: async () => {
       }
     }
   })
-}
 
-
-
+app.listen(PORT, () => {
+  console.log(`🌐 Server running on port ${PORT}`)
+})
 
 // ================= MULTI SESSION =================
 ;["session1", "session2"].forEach(start)
