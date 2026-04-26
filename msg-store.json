@@ -29037,5 +29037,825 @@
     },
     "sender": "231585072828587@lid",
     "chat": "120363392178497397@g.us"
+  },
+  "2A2F30D74C8D58B08E20": {
+    "message": {
+      "conversation": ".menu"
+    },
+    "sender": "59112322789567@lid",
+    "chat": "59112322789567@lid"
+  },
+  "2A52542EA0D4508FBAFC": {
+    "message": {
+      "conversation": ".menu",
+      "messageContextInfo": {
+        "messageSecret": "6Du6OaVKb1WkEGTTn6x+N5mNFBitJ/ljr/Af6b8Gnqw="
+      }
+    },
+    "sender": "79921053491262@lid",
+    "chat": "120363392178497397@g.us"
+  },
+  "3A87DDDA933A83BA9DDB": {
+    "message": {
+      "conversation": ".menu"
+    },
+    "sender": "11807385202835@lid",
+    "chat": "11807385202835@lid"
+  },
+  "3A0F45D04DD3DFD4AA3E": {
+    "message": {
+      "conversation": ".add"
+    },
+    "sender": "11807385202835@lid",
+    "chat": "11807385202835@lid"
+  },
+  "3AE9AEB11BA8A06E4E9B": {
+    "message": {
+      "conversation": ".menu"
+    },
+    "sender": "121801480904724@lid",
+    "chat": "121801480904724@lid"
+  },
+  "3A2EA281A448D262679A": {
+    "message": {
+      "conversation": ".aa"
+    },
+    "sender": "231585072828587@lid",
+    "chat": "231585072828587@lid"
+  },
+  "3AC477EE7703D2B6474D": {
+    "message": {
+      "conversation": ".add"
+    },
+    "sender": "231585072828587@lid",
+    "chat": "231585072828587@lid"
+  },
+  "3EB08AB091212E6B3776EE": {
+    "message": {
+      "reactionMessage": {
+        "key": {
+          "remoteJid": "231585072828587@lid",
+          "fromMe": true,
+          "id": "3AC477EE7703D2B6474D",
+          "participant": ""
+        },
+        "text": "⏳",
+        "senderTimestampMs": "1777167175113"
+      }
+    },
+    "sender": "231585072828587@lid",
+    "chat": "231585072828587@lid"
+  },
+  "3EB061BA57D17F5FAEC240": {
+    "message": {
+      "reactionMessage": {
+        "key": {
+          "remoteJid": "231585072828587@lid",
+          "fromMe": true,
+          "id": "3AC477EE7703D2B6474D",
+          "participant": ""
+        },
+        "text": "✅",
+        "senderTimestampMs": "1777167176002"
+      }
+    },
+    "sender": "231585072828587@lid",
+    "chat": "231585072828587@lid"
+  },
+  "3A54596CEF208C7D7CFB": {
+    "message": {
+      "extendedTextMessage": {
+        "text": ".add"
+      },
+      "messageContextInfo": {
+        "messageSecret": "ApVYS4ovpsVJjo3d8BgRr4FbyGTYGct+/1Qt1nAqGec="
+      }
+    },
+    "sender": "231585072828587@lid",
+    "chat": "120363392178497397@g.us"
+  },
+  "3EB0BC68904332D12BAC7D": {
+    "message": {
+      "reactionMessage": {
+        "key": {
+          "remoteJid": "120363392178497397@g.us",
+          "fromMe": false,
+          "id": "3A54596CEF208C7D7CFB",
+          "participant": "231585072828587@lid"
+        },
+        "text": "⏳",
+        "senderTimestampMs": "1777167195852"
+      }
+    },
+    "sender": "120363392178497397@g.us",
+    "chat": "120363392178497397@g.us"
+  },
+  "3EB00466AC6E135F1068F7": {
+    "message": {
+      "reactionMessage": {
+        "key": {
+          "remoteJid": "120363392178497397@g.us",
+          "fromMe": false,
+          "id": "3A54596CEF208C7D7CFB",
+          "participant": "231585072828587@lid"
+        },
+        "text": "⏳",
+        "senderTimestampMs": "1777167195861"
+      }
+    },
+    "sender": "231585072828587@lid",
+    "chat": "120363392178497397@g.us"
+  },
+  "3EB0DF89DCF8A00BB5B511": {
+    "message": {
+      "reactionMessage": {
+        "key": {
+          "remoteJid": "120363392178497397@g.us",
+          "fromMe": true,
+          "id": "3A54596CEF208C7D7CFB",
+          "participant": "231585072828587@lid"
+        },
+        "text": "❌",
+        "senderTimestampMs": "1777167197028"
+      }
+    },
+    "sender": "79921053491262@lid",
+    "chat": "120363392178497397@g.us"
+  },
+  "3EB0AB0DD1B5586D952BE4": {
+    "message": {
+      "reactionMessage": {
+        "key": {
+          "remoteJid": "120363392178497397@g.us",
+          "fromMe": false,
+          "id": "3A54596CEF208C7D7CFB",
+          "participant": "231585072828587@lid"
+        },
+        "text": "❌",
+        "senderTimestampMs": "1777167197406"
+      }
+    },
+    "sender": "231585072828587@lid",
+    "chat": "120363392178497397@g.us"
+  },
+  "3EB0CC5C60564FDBD76383": {
+    "message": {
+      "extendedTextMessage": {
+        "text": "Error",
+        "contextInfo": {
+          "stanzaId": "3A54596CEF208C7D7CFB",
+          "participant": "231585072828587@lid",
+          "quotedMessage": {
+            "extendedTextMessage": {
+              "text": ".add"
+            }
+          }
+        }
+      }
+    },
+    "sender": "79921053491262@lid",
+    "chat": "120363392178497397@g.us"
+  },
+  "3EB0738327C1F8638741B2": {
+    "message": {
+      "extendedTextMessage": {
+        "text": "Error",
+        "contextInfo": {
+          "stanzaId": "3A54596CEF208C7D7CFB",
+          "participant": "2347044625110@s.whatsapp.net",
+          "quotedMessage": {
+            "extendedTextMessage": {
+              "text": ".add"
+            }
+          }
+        }
+      }
+    },
+    "sender": "231585072828587@lid",
+    "chat": "120363392178497397@g.us"
+  },
+  "3AD97E031D540DCD3408": {
+    "message": {
+      "extendedTextMessage": {
+        "text": ".groupinfo",
+        "contextInfo": {
+          "disappearingMode": {
+            "initiator": "CHANGED_IN_CHAT",
+            "trigger": "CHAT_SETTING",
+            "initiatedByMe": false
+          }
+        }
+      },
+      "messageContextInfo": {
+        "messageSecret": "hG6mEZh0JV5V+Qkz1NUpxPrLTkxR4MMnivG/ImlC9x4="
+      }
+    },
+    "sender": "231585072828587@lid",
+    "chat": "120363392178497397@g.us"
+  },
+  "3EB04633AB3572DDEB0585": {
+    "message": {
+      "reactionMessage": {
+        "key": {
+          "remoteJid": "120363392178497397@g.us",
+          "fromMe": false,
+          "id": "3AD97E031D540DCD3408",
+          "participant": "231585072828587@lid"
+        },
+        "text": "⏳",
+        "senderTimestampMs": "1777167225431"
+      }
+    },
+    "sender": "120363392178497397@g.us",
+    "chat": "120363392178497397@g.us"
+  },
+  "3AC30146E15A79C99F7E": {
+    "message": {
+      "conversation": ".menu"
+    },
+    "sender": "231585072828587@lid",
+    "chat": "231585072828587@lid"
+  },
+  "3A01C3136D8F36C44666": {
+    "message": {
+      "conversation": ".menu"
+    },
+    "sender": "231585072828587@lid",
+    "chat": "231585072828587@lid"
+  },
+  "3A0DB69FCD55625821C9": {
+    "message": {
+      "conversation": ".menu"
+    },
+    "sender": "11807385202835@lid",
+    "chat": "11807385202835@lid"
+  },
+  "3A11C3AC1B035DF26D43": {
+    "message": {
+      "conversation": ".pp"
+    },
+    "sender": "11807385202835@lid",
+    "chat": "11807385202835@lid"
+  },
+  "3AEEDCF5909891DD78C4": {
+    "message": {
+      "extendedTextMessage": {
+        "text": ".menu"
+      },
+      "messageContextInfo": {
+        "messageSecret": "MxsIyZEZ7kw6JfPysjHNK6CeKWhH03Ikr/AEYmQ+2og="
+      }
+    },
+    "sender": "231585072828587@lid",
+    "chat": "120363392178497397@g.us"
+  },
+  "3EB0BFA6DB3841366A8BB0": {
+    "message": {
+      "reactionMessage": {
+        "key": {
+          "remoteJid": "120363392178497397@g.us",
+          "fromMe": true,
+          "id": "3AEEDCF5909891DD78C4",
+          "participant": "231585072828587@lid"
+        },
+        "text": "⏳",
+        "senderTimestampMs": "1777167698616"
+      }
+    },
+    "sender": "79921053491262@lid",
+    "chat": "120363392178497397@g.us"
+  },
+  "3EB0B9C541C4DC086C3EC4": {
+    "message": {
+      "extendedTextMessage": {
+        "text": "\n╔══════════════════════╗\n║ 🤖 GIBBORLEE MENU    ║\n╚══════════════════════╝\n\n📌 Use:\n.menu protection\n.menu group\n.menu all\n\n━━━━━━━━━━━━━━━━━━━━\n📂 Categories:\n• protection\n• group\n• management\n• join\n• tag\n• media\n• owner\n• modes\n• info\n",
+        "contextInfo": {
+          "stanzaId": "3AEEDCF5909891DD78C4",
+          "participant": "231585072828587@lid",
+          "quotedMessage": {
+            "extendedTextMessage": {
+              "text": ".menu"
+            }
+          }
+        }
+      }
+    },
+    "sender": "79921053491262@lid",
+    "chat": "120363392178497397@g.us"
+  },
+  "3EB06260C0D43961E202F9": {
+    "message": {
+      "reactionMessage": {
+        "key": {
+          "remoteJid": "120363392178497397@g.us",
+          "fromMe": false,
+          "id": "3AEEDCF5909891DD78C4",
+          "participant": "231585072828587@lid"
+        },
+        "text": "✅",
+        "senderTimestampMs": "1777167700471"
+      }
+    },
+    "sender": "120363392178497397@g.us",
+    "chat": "120363392178497397@g.us"
+  },
+  "3A567C909F2C4BC19ED3": {
+    "message": {
+      "conversation": ".menu"
+    },
+    "sender": "231585072828587@lid",
+    "chat": "231585072828587@lid"
+  },
+  "3A21BC6034FE98B14F0F": {
+    "message": {
+      "conversation": ".menu"
+    },
+    "sender": "11807385202835@lid",
+    "chat": "11807385202835@lid"
+  },
+  "3AD6C32E8C52460F4E88": {
+    "message": {
+      "extendedTextMessage": {
+        "text": ".menu",
+        "contextInfo": {
+          "disappearingMode": {
+            "initiator": "CHANGED_IN_CHAT",
+            "trigger": "CHAT_SETTING",
+            "initiatedByMe": false
+          }
+        }
+      },
+      "messageContextInfo": {
+        "messageSecret": "kUEGkw3mL/W1gBDeoUUbjPdcguaN7b3k8N/UR2hdFno="
+      }
+    },
+    "sender": "231585072828587@lid",
+    "chat": "120363392178497397@g.us"
+  },
+  "3A93EC01B103ACF2F216": {
+    "message": {
+      "extendedTextMessage": {
+        "text": ".addiwner @79921053491262",
+        "contextInfo": {
+          "mentionedJid": [
+            "79921053491262@lid"
+          ],
+          "disappearingMode": {
+            "initiator": "CHANGED_IN_CHAT",
+            "trigger": "CHAT_SETTING",
+            "initiatedByMe": false
+          }
+        }
+      },
+      "messageContextInfo": {
+        "messageSecret": "s58LKP7ibyKFOCEy7gRZps57ghio1fvWbo2vM7PgC3E="
+      }
+    },
+    "sender": "231585072828587@lid",
+    "chat": "120363392178497397@g.us"
+  },
+  "3AC400D29AB3E46B4EA4": {
+    "message": {
+      "extendedTextMessage": {
+        "text": ".addowner @79921053491262",
+        "contextInfo": {
+          "mentionedJid": [
+            "79921053491262@lid"
+          ],
+          "disappearingMode": {
+            "initiator": "CHANGED_IN_CHAT",
+            "trigger": "CHAT_SETTING",
+            "initiatedByMe": false
+          }
+        }
+      },
+      "messageContextInfo": {
+        "messageSecret": "HESZQyarCDez8ZzUBeLTk4JwtZEV7htfAc0c86m6LaE="
+      }
+    },
+    "sender": "231585072828587@lid",
+    "chat": "120363392178497397@g.us"
+  },
+  "3EB0BD01A9CCFC5FB3441C": {
+    "message": {
+      "reactionMessage": {
+        "key": {
+          "remoteJid": "120363392178497397@g.us",
+          "fromMe": true,
+          "id": "3AC400D29AB3E46B4EA4",
+          "participant": "231585072828587@lid"
+        },
+        "text": "⏳",
+        "senderTimestampMs": "1777168260370"
+      }
+    },
+    "sender": "79921053491262@lid",
+    "chat": "120363392178497397@g.us"
+  },
+  "3EB08614F3BDDDBB379B6F": {
+    "message": {
+      "extendedTextMessage": {
+        "text": "👑 Owner added successfully ✅",
+        "contextInfo": {
+          "stanzaId": "3AC400D29AB3E46B4EA4",
+          "participant": "231585072828587@lid",
+          "quotedMessage": {
+            "extendedTextMessage": {
+              "text": ".addowner @79921053491262"
+            }
+          }
+        }
+      }
+    },
+    "sender": "79921053491262@lid",
+    "chat": "120363392178497397@g.us"
+  },
+  "3EB0F80B449CDA8FFED9A1": {
+    "message": {
+      "reactionMessage": {
+        "key": {
+          "remoteJid": "120363392178497397@g.us",
+          "fromMe": true,
+          "id": "3AC400D29AB3E46B4EA4",
+          "participant": "231585072828587@lid"
+        },
+        "text": "✅",
+        "senderTimestampMs": "1777168261231"
+      }
+    },
+    "sender": "79921053491262@lid",
+    "chat": "120363392178497397@g.us"
+  },
+  "2A0532EAB78D5C572A88": {
+    "message": {
+      "conversation": ".menu"
+    },
+    "sender": "150831315836975@lid",
+    "chat": "150831315836975@lid"
+  },
+  "3EB0642FF4E8E1D091CB9A": {
+    "message": {
+      "extendedTextMessage": {
+        "text": "🔒 Bot is in private mode (owner only)",
+        "contextInfo": {
+          "stanzaId": "2A0532EAB78D5C572A88",
+          "participant": "2349021540840@s.whatsapp.net",
+          "quotedMessage": {
+            "conversation": ".menu"
+          }
+        }
+      }
+    },
+    "sender": "150831315836975@lid",
+    "chat": "150831315836975@lid"
+  },
+  "2A0BA8EE1ED8765EB7CE": {
+    "message": {
+      "extendedTextMessage": {
+        "text": ".addowner @231585072828587"
+      },
+      "messageContextInfo": {
+        "messageSecret": "0Wbs8GzIufnuIfw1RcDkjwWpIp6mLf3x9qyAz+dlaco="
+      }
+    },
+    "sender": "79921053491262@lid",
+    "chat": "120363392178497397@g.us"
+  },
+  "3EB04DEA1E639FDD1C5BAC": {
+    "message": {
+      "reactionMessage": {
+        "key": {
+          "remoteJid": "120363392178497397@g.us",
+          "fromMe": false,
+          "id": "2A0BA8EE1ED8765EB7CE",
+          "participant": "79921053491262@lid"
+        },
+        "text": "⏳",
+        "senderTimestampMs": "1777168303375"
+      }
+    },
+    "sender": "79921053491262@lid",
+    "chat": "120363392178497397@g.us"
+  },
+  "3EB024D6E21A5039A31E5D": {
+    "message": {
+      "extendedTextMessage": {
+        "text": "👑 Owner added successfully ✅",
+        "contextInfo": {
+          "stanzaId": "2A0BA8EE1ED8765EB7CE",
+          "participant": "2349021540840@s.whatsapp.net",
+          "quotedMessage": {
+            "extendedTextMessage": {
+              "text": ".addowner @231585072828587"
+            }
+          }
+        }
+      }
+    },
+    "sender": "79921053491262@lid",
+    "chat": "120363392178497397@g.us"
+  },
+  "3EB01374C7C4BE01A12507": {
+    "message": {
+      "reactionMessage": {
+        "key": {
+          "remoteJid": "120363392178497397@g.us",
+          "fromMe": true,
+          "id": "2A0BA8EE1ED8765EB7CE",
+          "participant": "79921053491262@lid"
+        },
+        "text": "⏳",
+        "senderTimestampMs": "1777168303383"
+      }
+    },
+    "sender": "231585072828587@lid",
+    "chat": "120363392178497397@g.us"
+  },
+  "3EB0C3E73D82DA3332CCE3": {
+    "message": {
+      "reactionMessage": {
+        "key": {
+          "remoteJid": "120363392178497397@g.us",
+          "fromMe": true,
+          "id": "2A0BA8EE1ED8765EB7CE",
+          "participant": "79921053491262@lid"
+        },
+        "text": "✅",
+        "senderTimestampMs": "1777168303740"
+      }
+    },
+    "sender": "120363392178497397@g.us",
+    "chat": "120363392178497397@g.us"
+  },
+  "2A55328D13DA77CFCEF3": {
+    "message": {
+      "extendedTextMessage": {
+        "text": ".addowner @231585072828587"
+      },
+      "messageContextInfo": {
+        "messageSecret": "6jW4VAPlUj2PUbe7u5zltVLxiDnD76GX+xy5G/o/HTI="
+      }
+    },
+    "sender": "79921053491262@lid",
+    "chat": "120363392178497397@g.us"
+  },
+  "3EB0CC1EF0265017B71292": {
+    "message": {
+      "extendedTextMessage": {
+        "text": "🔒 Bot is in private mode (owner only)",
+        "contextInfo": {
+          "stanzaId": "2A55328D13DA77CFCEF3",
+          "participant": "79921053491262@lid",
+          "quotedMessage": {
+            "extendedTextMessage": {
+              "text": ".addowner @231585072828587"
+            }
+          }
+        }
+      }
+    },
+    "sender": "231585072828587@lid",
+    "chat": "120363392178497397@g.us"
+  },
+  "3EB0EA3B7DF18C99C86E1E": {
+    "message": {
+      "extendedTextMessage": {
+        "text": "🔒 Bot is in private mode (owner only)",
+        "contextInfo": {
+          "stanzaId": "2A55328D13DA77CFCEF3",
+          "participant": "2349021540840@s.whatsapp.net",
+          "quotedMessage": {
+            "extendedTextMessage": {
+              "text": ".addowner @231585072828587"
+            }
+          }
+        }
+      }
+    },
+    "sender": "79921053491262@lid",
+    "chat": "120363392178497397@g.us"
+  },
+  "2ABEB4F9BF7DEFB53B13": {
+    "message": {
+      "extendedTextMessage": {
+        "text": ".addowner @231585072828587"
+      },
+      "messageContextInfo": {
+        "messageSecret": "QwmWRpMvb/0qIPzicKOAA4CGmMxVj3mnEGCIHRpEmV4="
+      }
+    },
+    "sender": "79921053491262@lid",
+    "chat": "120363392178497397@g.us"
+  },
+  "3EB0CA942B7FAA598CEFA1": {
+    "message": {
+      "extendedTextMessage": {
+        "text": "🔒 Bot is in private mode (owner only)",
+        "contextInfo": {
+          "stanzaId": "2ABEB4F9BF7DEFB53B13",
+          "participant": "79921053491262@lid",
+          "quotedMessage": {
+            "extendedTextMessage": {
+              "text": ".addowner @231585072828587"
+            }
+          }
+        }
+      }
+    },
+    "sender": "231585072828587@lid",
+    "chat": "120363392178497397@g.us"
+  },
+  "3EB03CD863C1C2085B14C3": {
+    "message": {
+      "extendedTextMessage": {
+        "text": "🔒 Bot is in private mode (owner only)",
+        "contextInfo": {
+          "stanzaId": "2ABEB4F9BF7DEFB53B13",
+          "participant": "2349021540840@s.whatsapp.net",
+          "quotedMessage": {
+            "extendedTextMessage": {
+              "text": ".addowner @231585072828587"
+            }
+          }
+        }
+      }
+    },
+    "sender": "79921053491262@lid",
+    "chat": "120363392178497397@g.us"
+  },
+  "3A478CE948F711BCE97A": {
+    "message": {
+      "extendedTextMessage": {
+        "text": ".addowner @79921053491262"
+      },
+      "messageContextInfo": {
+        "messageSecret": "XOIEnEIQWLcL9AANuvnWutrE9nRa9CZCxiNjwh5dJ90="
+      }
+    },
+    "sender": "231585072828587@lid",
+    "chat": "120363392178497397@g.us"
+  },
+  "3EB09B8044067741E9732E": {
+    "message": {
+      "reactionMessage": {
+        "key": {
+          "remoteJid": "120363392178497397@g.us",
+          "fromMe": true,
+          "id": "3A478CE948F711BCE97A",
+          "participant": "231585072828587@lid"
+        },
+        "text": "⏳",
+        "senderTimestampMs": "1777168395558"
+      }
+    },
+    "sender": "79921053491262@lid",
+    "chat": "120363392178497397@g.us"
+  },
+  "3EB09119C43F3FA18E2A9F": {
+    "message": {
+      "extendedTextMessage": {
+        "text": "👑 Owner added successfully ✅",
+        "contextInfo": {
+          "stanzaId": "3A478CE948F711BCE97A",
+          "participant": "231585072828587@lid",
+          "quotedMessage": {
+            "extendedTextMessage": {
+              "text": ".addowner @79921053491262"
+            }
+          }
+        }
+      }
+    },
+    "sender": "79921053491262@lid",
+    "chat": "120363392178497397@g.us"
+  },
+  "3EB0048831C811D86ED626": {
+    "message": {
+      "reactionMessage": {
+        "key": {
+          "remoteJid": "120363392178497397@g.us",
+          "fromMe": true,
+          "id": "3A478CE948F711BCE97A",
+          "participant": "231585072828587@lid"
+        },
+        "text": "✅",
+        "senderTimestampMs": "1777168396092"
+      }
+    },
+    "sender": "79921053491262@lid",
+    "chat": "120363392178497397@g.us"
+  },
+  "3AD6DD4B9169894A1412": {
+    "message": {
+      "conversation": ".menu"
+    },
+    "sender": "11807385202835@lid",
+    "chat": "11807385202835@lid"
+  },
+  "3EB09325188FF839CECCA4": {
+    "message": {
+      "extendedTextMessage": {
+        "text": "🔒 Bot is in private mode (owner only)",
+        "contextInfo": {
+          "stanzaId": "3AD6DD4B9169894A1412",
+          "participant": "2347044625110@s.whatsapp.net",
+          "quotedMessage": {
+            "conversation": ".menu"
+          }
+        }
+      }
+    },
+    "sender": "11807385202835@lid",
+    "chat": "11807385202835@lid"
+  },
+  "2AD79275D2DC3E4A2C35": {
+    "message": {
+      "conversation": ".whoami",
+      "messageContextInfo": {
+        "messageSecret": "hy4kNtBjzrN/6UTj12u7zI6PQ4PNDmKA1bgj1UKGU0U="
+      }
+    },
+    "sender": "79921053491262@lid",
+    "chat": "120363392178497397@g.us"
+  },
+  "3EB0691235F76B261AE5D9": {
+    "message": {
+      "reactionMessage": {
+        "key": {
+          "remoteJid": "120363392178497397@g.us",
+          "fromMe": true,
+          "id": "2AD79275D2DC3E4A2C35",
+          "participant": "79921053491262@lid"
+        },
+        "text": "⏳",
+        "senderTimestampMs": "1777168429689"
+      }
+    },
+    "sender": "231585072828587@lid",
+    "chat": "120363392178497397@g.us"
+  },
+  "3EB08A31B7ECFFCD190D94": {
+    "message": {
+      "reactionMessage": {
+        "key": {
+          "remoteJid": "120363392178497397@g.us",
+          "fromMe": false,
+          "id": "2AD79275D2DC3E4A2C35",
+          "participant": "79921053491262@lid"
+        },
+        "text": "⏳",
+        "senderTimestampMs": "1777168429694"
+      }
+    },
+    "sender": "79921053491262@lid",
+    "chat": "120363392178497397@g.us"
+  },
+  "3EB05A41A0EFF0ADE2510E": {
+    "message": {
+      "extendedTextMessage": {
+        "text": "👤 Your JID:\n79921053491262@lid",
+        "contextInfo": {
+          "stanzaId": "2AD79275D2DC3E4A2C35",
+          "participant": "79921053491262@lid",
+          "quotedMessage": {
+            "conversation": ".whoami"
+          }
+        }
+      }
+    },
+    "sender": "231585072828587@lid",
+    "chat": "120363392178497397@g.us"
+  },
+  "3EB06326757CD4E30DAE9A": {
+    "message": {
+      "extendedTextMessage": {
+        "text": "👤 Your JID:\n79921053491262@lid",
+        "contextInfo": {
+          "stanzaId": "2AD79275D2DC3E4A2C35",
+          "participant": "2349021540840@s.whatsapp.net",
+          "quotedMessage": {
+            "conversation": ".whoami"
+          }
+        }
+      }
+    },
+    "sender": "79921053491262@lid",
+    "chat": "120363392178497397@g.us"
+  },
+  "3EB0D9C3990ECEF9B1C69B": {
+    "message": {
+      "reactionMessage": {
+        "key": {
+          "remoteJid": "120363392178497397@g.us",
+          "fromMe": true,
+          "id": "2AD79275D2DC3E4A2C35",
+          "participant": "79921053491262@lid"
+        },
+        "text": "✅",
+        "senderTimestampMs": "1777168430251"
+      }
+    },
+    "sender": "231585072828587@lid",
+    "chat": "120363392178497397@g.us"
   }
 }
