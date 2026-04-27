@@ -116,8 +116,66 @@ const COMMANDS = {
   mode: "when set to private: 🔒 Owner only mode, when public: 🔘 Everyone can use bot ",
 }
 
-const normalizeJid = (jid) =>
-  jid.includes(":") ? jid.split(":")[0] + "@s.whatsapp.net" : jid
+// ================= PERMISSION SYSTEM =================
+
+// extract only numbers
+const getUserId = (jid = "") => {
+  if (typeof jid !== "string") return ""
+  return jid.split("@")[0].replace(/\D/g, "")
+}
+
+// normalize jid safely
+const normalizeJid = (jid = "") => {
+  if (typeof jid !== "string") return ""
+
+  jid = jid.split(":")[0]
+
+  if (jid.includes("@lid")) {
+    jid = jid.replace("@lid", "")
+  }
+
+  return jid.includes("@")
+    ? jid.split("@")[0] + "@s.whatsapp.net"
+    : ""
+}
+
+// check roles
+const getPermissions = ({ msg, sock, BOT_OWNERS, groupAdmins }) => {
+  const senderRaw = msg.key?.participant || msg.key?.remoteJid || ""
+  const sender =
+  msg.key.participant ||
+  msg.key.remoteJid ||
+  ""
+  const botId = normalizeJid(sock.user?.id || "")
+
+  const senderId = getUserId(sender)
+  const botUserId = getUserId(botId)
+
+  const ownerIds = BOT_OWNERS.map(o =>
+    getUserId(normalizeJid(o))
+  )
+
+  const isBot = msg.key.fromMe
+
+  const isOwner =
+    isBot || // 🔥 bot always owner
+    senderId === botUserId ||
+    ownerIds.includes(senderId)
+
+  const isAdmin = groupAdmins
+    ?.map(a => normalizeJid(a))
+    .map(getUserId)
+    .includes(senderId)
+
+  return {
+    sender,
+    senderId,
+    botId,
+    isBot,
+    isOwner,
+    isAdmin
+  }
+}
 // ================= FILES =================
 const GROUP_SETTINGS_FILE = "./group-settings.json"
 const STORE_FILE = "./msg-store.json"
@@ -219,15 +277,18 @@ async function start(session) {
         console.log("✅ Bot connected")
 
         const botId = normalizeJid(sock.user.id)
+const myNumber = "2347044625110@s.whatsapp.net" // 👈 PUT YOUR NUMBER
 
-// normalize all
-BOT_OWNERS = BOT_OWNERS.map(o => normalizeJid(o))
+const ids = [botId, myNumber]
 
-// force add bot
-if (!BOT_OWNERS.includes(botId)) {
-  BOT_OWNERS.push(botId)
-  saveOwners()
-}
+ids.forEach(id => {
+  const clean = normalizeJid(id)
+  if (!BOT_OWNERS.includes(clean)) {
+    BOT_OWNERS.push(clean)
+  }
+})
+
+saveOwners()
 
 console.log("👑 Owners:", BOT_OWNERS)
         console.log("🤖 Logged in as:", botId)
@@ -270,20 +331,34 @@ console.log("👑 Owners:", BOT_OWNERS)
 
   sock.ev.on("messages.upsert", async ({ messages }) => {
     const msg = messages[0]
+    const jid = msg.key.remoteJid || ""
     if (!msg.message) return
-    const sender = normalizeJid(msg.key.participant || msg.key.remoteJid)
+    let groupAdmins = []
+
+if (jid.endsWith("@g.us")) {
+  const meta = await sock.groupMetadata(jid)
+  groupAdmins = meta.participants
+    .filter(p => p.admin)
+    .map(p => p.id)
+}
+
+// ✅ NEW PERMISSION SYSTEM
+const {
+  sender,
+  isOwner,
+  isAdmin,
+  isBot
+} = getPermissions({ msg, sock, BOT_OWNERS, groupAdmins })
+    // const sender = normalizeJid(msg.key.participant || msg.key.remoteJid)
 
 const cleanSender = normalizeJid(sender)
-const botId = normalizeJid(sock.user.id)
 
-const normalizedOwners = BOT_OWNERS.map(o => normalizeJid(o))
 
-const isOwner =
-  normalizedOwners.includes(cleanSender) ||
-  cleanSender === botId
+// const isOwner =
+//   normalizedOwners.includes(cleanSender) ||
+//   cleanSender === botId
     BOT_STATS.messages++
-    const jid = msg.key.remoteJid || ""
-    const isBot = msg.key.fromMe
+    // const isBot = msg.key.fromMe
     const isGroup = jid.includes("@g.us")
     const isDM = !isGroup
     const settings = getSettings("global")
@@ -338,17 +413,16 @@ if (group_settings.antistatus || group_settings.antistatus_mention) {
 
 
     // ================= GROUP META =================
-    let groupAdmins = []
+    // let groupAdmins = []
 
-    if (isGroup) {
-      const meta = await sock.groupMetadata(jid)
-      groupAdmins = meta.participants
-        .filter((p) => p.admin)
-        .map((p) => p.id)
-    }
+    // if (isGroup) {
+    //   const meta = await sock.groupMetadata(jid)
+    //   groupAdmins = meta.participants
+    //     .filter((p) => p.admin)
+    //     .map((p) => p.id)
+    // }
 
 
-    const isAdmin = groupAdmins.includes(sender)
 
 
     // ================= SAVE MESSAGE =================
@@ -458,7 +532,7 @@ const cmd = args.shift()?.toLowerCase() || ""
 // ================= MODES =================
 const botMode = settings?.mode === "private" ? "private" : "public"
 
-if (botMode === "private" && !isOwner && !msg.key.fromMe) {
+if (botMode === "private" && !isOwner && !isBot) {
   return
 }
 
@@ -474,7 +548,7 @@ if (isDM) {
 
       
       // ===== MEDIA =====
-      vv: async () => {
+       vv: async () => {
   if (!isOwner) return reply("❌ Owner only")
 
   const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage
