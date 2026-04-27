@@ -128,10 +128,11 @@ const COMMANDS = {
 
   vv: "👁️ Recover view-once media",
   pp: "🖼️ Get profile picture HD",
+  
   sticker: "🖼️ Convert image to sticker",
   stickergif: "🎥 Convert video to animated sticker",
-  memeSticker: "😂 Text → meme sticker",
-  captionSticker: "🖌️ Caption → sticker",
+  memesticker: "😂 Text → meme sticker",
+  captionsticker: "🖌️ Caption → sticker",
   stickerpack: "🔥 Create sticker pack",
 
   addowner: "👑 Add bot owner",
@@ -1537,6 +1538,7 @@ try {
 • media
 • owner
 • mode
+• sticker
 • info
 `
 
@@ -1564,7 +1566,8 @@ try {
     management: ["setname", "setdesc", "groupinfo", "viewadmins", "grouplink", "revoke"],
     join: ["approve", "approveall", "reject"],
     tag: ["tagall", "hidetag", "tagonline"],
-    media: ["vv", "pp", "sticker", "stickergif", "memesticker", "captionsticker", "stickerpack"],
+    media: ["vv", "pp"],
+    sticker: [ "sticker", "stickergif", "memesticker", "captionsticker", "stickerpack" ],
     owner: ["addowner", "delowner", "owners", "stats"],
     mode: ["Private", "Public"],
     info: ["whoami"]
