@@ -25,6 +25,8 @@ const logger = pino({ level : "silent"})
 // Use host-provided port OR fallback to 3000
 const PORT = process.env.PORT || 3000
 
+const dmCooldown = new Map()
+
  let qrCount = 0
 
 app.get("/", (req, res) => {
@@ -423,6 +425,53 @@ const reply = async (text) => {
 
     const getTarget = () =>
       msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0]
+
+
+const text =
+  msg.message?.conversation ||
+  msg.message?.extendedTextMessage?.text ||
+  msg.message?.imageMessage?.caption ||
+  msg.message?.videoMessage?.caption ||
+  "📎 media"
+
+// 🔔 REAL PUSH LOGGER
+console.log(`
+🔔 NEW MESSAGE NOTIFICATION
+━━━━━━━━━━━━━━━━━━
+📩 Type: ${isDM ? "DM" : "GROUP"}
+👤 From: ${pushName}
+🆔 JID: ${sender}
+💬 Text: ${text.slice(0, 80)}
+⏰ Time: ${new Date().toLocaleTimeString()}
+━━━━━━━━━━━━━━━━━━
+`)
+
+if (isDM && !msg.key.fromMe) {
+  const body =
+    msg.message?.conversation ||
+    msg.message?.extendedTextMessage?.text ||
+    ""
+
+  // ignore empty
+  if (!body) return
+
+  // auto reply logic
+  const autoReply = `
+🤖 *Auto Reply System*
+
+Hello 👋
+I am GIBBORLEE BOT.
+
+⚡ Your message has been received:
+"${body.slice(0, 50)}"
+
+⏳ Type .menu to interact with me
+`
+
+  await sock.sendMessage(jid, {
+    text: autoReply
+  }, { quoted: msg })
+}
 
     // ================= ANTI STATUS =================
 if (group_settings.antistatus || group_settings.antistatus_mention) {
