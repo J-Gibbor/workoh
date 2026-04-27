@@ -4,6 +4,8 @@ import makeWASocket, {
   downloadContentFromMessage
 } from "@whiskeysockets/baileys"
 
+import sharp from "sharp"
+import { createCanvas, loadImage } from "canvas"
 import pino, { levels } from "pino"
 import fs from "fs"
 import express from "express"
@@ -68,6 +70,24 @@ const BOT_STATS = {
   messages: 0,
   commands: 0
 }
+
+// ==== STICKER META ====
+
+const STICKER_META = {
+  packname: "GIBBORLEE BOT 🤖",
+  author: "Sticker Engine v2"
+}
+
+const createSticker = async (buffer) => {
+  return await sharp(buffer)
+    .resize(512, 512, {
+      fit: "contain",
+      background: { r: 0, g: 0, b: 0, alpha: 0 }
+    })
+    .webp({ quality: 85 })
+    .toBuffer()
+}
+
 const COMMANDS = {
   antidelete: "🧠 Restore deleted messages automatically",
   antilink: "🔗 Delete messages containing links",
@@ -106,6 +126,11 @@ const COMMANDS = {
 
   vv: "👁️ Recover view-once media",
   pp: "🖼️ Get profile picture HD",
+  sticker: "🖼️ Convert image to sticker",
+  stickergif: "🎥 Convert video to animated sticker",
+  memeSticker: "😂 Text → meme sticker",
+  captionSticker: "🖌️ Caption → sticker",
+  stickerpack: "🔥 Create sticker pack",
 
   addowner: "👑 Add bot owner",
   delowner: "👑 Remove bot owner",
@@ -618,6 +643,140 @@ if (isDM) {
         }
       },
 
+      sticker: async () => {
+        if (!isGroup) return reply("❌ Group only")
+  const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage
+
+  let mediaMessage =
+    msg.message?.imageMessage ||
+    quoted?.imageMessage
+
+  if (!mediaMessage) return reply("❌ Reply to an image")
+
+  const stream = await downloadContentFromMessage(mediaMessage, "image")
+
+  let buffer = Buffer.from([])
+  for await (const chunk of stream) {
+    buffer = Buffer.concat([buffer, chunk])
+  }
+
+  const stickerBuffer = await createSticker(buffer)
+
+  await sock.sendMessage(jid, {
+    sticker: stickerBuffer
+  }, { quoted: msg })
+},
+
+stickergif: async () => {
+  if (!isGroup) return reply("❌ Group only")
+  const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage
+
+  let mediaMessage =
+    msg.message?.videoMessage ||
+    quoted?.videoMessage
+
+  if (!mediaMessage) return reply("❌ Reply to a short video")
+
+  const stream = await downloadContentFromMessage(mediaMessage, "video")
+
+  let buffer = Buffer.from([])
+  for await (const chunk of stream) {
+    buffer = Buffer.concat([buffer, chunk])
+  }
+
+  const stickerBuffer = await createSticker(buffer)
+
+  await sock.sendMessage(jid, {
+    sticker: stickerBuffer
+  }, { quoted: msg })
+},
+
+memesticker: async () => {
+  if (!isGroup) return reply("❌ Group only")
+  const text = args.join(" ")
+  if (!text) return reply("❌ Provide text")
+
+  const canvas = createCanvas(512, 512)
+  const ctx = canvas.getContext("2d")
+
+  // background
+  ctx.fillStyle = "white"
+  ctx.fillRect(0, 0, 512, 512)
+
+  // text styling
+  ctx.fillStyle = "black"
+  ctx.font = "bold 40px Sans"
+  ctx.textAlign = "center"
+
+  wrapText(ctx, text, 256, 256, 450, 45)
+
+  const buffer = canvas.toBuffer("image/png")
+  const sticker = await createSticker(buffer)
+
+  await sock.sendMessage(jid, {
+    sticker: sticker,
+    ...STICKER_META
+  }, { quoted: msg })
+},
+
+captionsticker: async () => {
+  if (!isGroup) return reply("❌ Group only")
+  const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage
+
+  const text =
+    msg.message?.imageMessage?.caption ||
+    msg.message?.videoMessage?.caption ||
+    quoted?.imageMessage?.caption ||
+    quoted?.videoMessage?.caption
+
+  if (!text) return reply("❌ No caption found")
+
+  const canvas = createCanvas(512, 512)
+  const ctx = canvas.getContext("2d")
+
+  ctx.fillStyle = "#ffffff"
+  ctx.fillRect(0, 0, 512, 512)
+
+  ctx.fillStyle = "#000"
+  ctx.font = "bold 36px Sans"
+  ctx.textAlign = "center"
+
+  wrapText(ctx, text, 256, 256, 450, 40)
+
+  const buffer = canvas.toBuffer("image/png")
+  const sticker = await createSticker(buffer)
+
+  await sock.sendMessage(jid, {
+    sticker,
+    ...STICKER_META
+  }, { quoted: msg })
+},
+
+stickerpack: async () => {
+  if (!isGroup) return reply("❌ Group only")
+  const name = args.join(" ") || "Special Pack"
+
+  const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage
+
+  let media =
+    msg.message?.imageMessage ||
+    quoted?.imageMessage
+
+  if (!media) return reply("❌ Reply to image")
+
+  const stream = await downloadContentFromMessage(media, "image")
+
+  let buffer = Buffer.from([])
+  for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk])
+
+  const sticker = await createSticker(buffer)
+
+  await sock.sendMessage(jid, {
+    sticker,
+    packname: name,
+    author: "GIBBORLEE PACK CREATOR"
+  }, { quoted: msg })
+},
       // ===== TOGGLES =====
       antidelete: async () => {
         if (!isAdmin && !isOwner) return reply("❌ Admin or Bot owner only")
@@ -1348,7 +1507,7 @@ try {
     management: ["setname", "setdesc", "groupinfo", "viewadmins", "grouplink", "revoke"],
     join: ["approve", "approveall", "reject"],
     tag: ["tagall", "hidetag", "tagonline"],
-    media: ["vv", "pp"],
+    media: ["vv", "pp", "sticker", "stickergif", "memesticker", "captionsticker", "stickerpack"],
     owner: ["addowner", "delowner", "owners", "stats"],
     mode: ["Private", "Public"],
     info: ["whoami"]
