@@ -580,8 +580,6 @@ if (isDM) {
       caption: "👁️ View-once recovered"
     })
 
-    reply("Check your 📩 for the 👁️")
-
   } catch (e) {
     console.log(e)
     reply("❌ Failed to extract media")
@@ -601,7 +599,6 @@ if (isDM) {
             caption: "🖼️ Profile picture HD"
           })
 
-          reply("Check your 📩 for the 🖼️")
         } catch {
           reply("❌ Cannot fetch profile picture")
         }
