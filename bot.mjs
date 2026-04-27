@@ -395,7 +395,7 @@ console.log("👑 Owners:", BOT_OWNERS)
       const key = reaction.key
 
       // 🎯 Only trigger on specific emoji
-      if (!["🔥", "👁️", "💾"].includes(emoji)) return
+      if (emoji !== "👁️") return
 
       // 🔍 Get original message
       const original = MSG_STORE[key.id]
