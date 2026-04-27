@@ -14,6 +14,9 @@ import path from "path"
 import { fileURLToPath } from "url"
 import os from "os"
 import moment from "moment-timezone"
+import ffmpegPath from "ffmpeg-static"
+import { exec } from "child_process"
+
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -60,7 +63,7 @@ process.on("unhandledRejection", (err) => {
 // ===== GLOBAL STATES =====
 let CURRENT_QR = ""
 let reconnecting = false
-let keepAliveStarted = false
+
 
 // ================= CONFIG =================
 const PREFIX = "."
@@ -71,6 +74,7 @@ const BOT_STATS = {
   commands: 0
 }
 
+
 // ==== STICKER META ====
 
 const STICKER_META = {
@@ -79,13 +83,19 @@ const STICKER_META = {
 }
 
 const createSticker = async (buffer) => {
-  return await sharp(buffer)
-    .resize(512, 512, {
-      fit: "contain",
-      background: { r: 0, g: 0, b: 0, alpha: 0 }
-    })
-    .webp({ quality: 85 })
-    .toBuffer()
+  if (!Buffer.isBuffer(buffer)) {
+    throw new Error("Invalid buffer")
+  }
+
+  try {
+    return await sharp(buffer)
+      .resize(512, 512, { fit: "contain" })
+      .webp({ quality: 80 })
+      .toBuffer()
+  } catch (e) {
+    console.log("Sticker error:", e)
+    throw new Error("Unsupported image format")
+  }
 }
 
 const COMMANDS = {
@@ -140,6 +150,26 @@ const COMMANDS = {
   stats: "📊 View bot uptime, message count, and command usage",
   mode: "when set to private: 🔒 Owner only mode, when public: 🔘 Everyone can use bot ",
 }
+
+const menuHeaders = [
+  "╭─❖ 🤖 𝐆𝐈𝐁𝐁𝐎𝐑𝐋𝐄𝐄 𝐁𝐎𝐓 𝐌𝐄𝐍𝐔 ❖─╮",
+  "╭─⚡ 𝐒𝐘𝐒𝐓𝐄𝐌 𝐎𝐍𝐋𝐈𝐍𝐄 • 𝐆𝐈𝐁𝐁𝐎𝐑𝐋𝐄𝐄 ⚡─╮",
+  "╭─🚀 𝐌𝐔𝐋𝐓𝐈-𝐅𝐔𝐍𝐂𝐓𝐈𝐎𝐍 𝐏𝐀𝐍𝐄𝐋 🚀─╮",
+  "╭─🔥 𝐏𝐎𝐖𝐄𝐑 𝐌𝐎𝐃𝐄: 𝐀𝐂𝐓𝐈𝐕𝐄 🔥─╮",
+  "╭─🧠 𝐒𝐌𝐀𝐑𝐓 𝐁𝐎𝐓 𝐈𝐍𝐓𝐄𝐑𝐅𝐀𝐂𝐄 🧠─╮",
+  "╭─📡 𝐂𝐎𝐍𝐍𝐄𝐂𝐓𝐄𝐃 • 𝐖𝐇𝐀𝐓𝐒𝐀𝐏𝐏 𝐍𝐄𝐓𝐖𝐎𝐑𝐊 📡─╮",
+  "╭─🛡️ 𝐒𝐄𝐂𝐔𝐑𝐈𝐓𝐘 𝐒𝐘𝐒𝐓𝐄𝐌 𝐀𝐂𝐓𝐈𝐕𝐄 🛡️─╮",
+  "╭─⚙️ 𝐄𝐍𝐆𝐈𝐍𝐄 𝐋𝐎𝐀𝐃𝐄𝐃 • 𝐑𝐄𝐀𝐃𝐘 ⚙️─╮",
+  "╭─🌐 𝐆𝐋𝐎𝐁𝐀𝐋 𝐍𝐄𝐓𝐖𝐎𝐑𝐊 𝐎𝐍𝐋𝐈𝐍𝐄 🌐─╮",
+  "╭─💥 𝐔𝐋𝐓𝐑𝐀 𝐏𝐄𝐑𝐅𝐎𝐑𝐌𝐀𝐍𝐂𝐄 💥─╮",
+  "╭─📊 𝐋𝐈𝐕𝐄 𝐂𝐎𝐍𝐓𝐑𝐎𝐋 𝐏𝐀𝐍𝐄𝐋 📊─╮",
+  "╭─🔔 𝐑𝐄𝐀𝐋-𝐓𝐈𝐌𝐄 𝐌𝐎𝐍𝐈𝐓𝐎𝐑 🔔─╮",
+  "╭─👑 𝐎𝐖𝐍𝐄𝐑 𝐂𝐎𝐍𝐓𝐑𝐎𝐋 𝐃𝐀𝐒𝐇𝐁𝐎𝐀𝐑𝐃 👑─╮"
+]
+
+const getHeader = () =>
+  menuHeaders[Math.floor(Math.random() * menuHeaders.length)]
+
 
 // ================= PERMISSION SYSTEM =================
 
@@ -269,7 +299,7 @@ async function start(session) {
       auth: state,
       logger,
       printQRInTerminal: false,
-      markOnlineOnConnect: true,
+      markOnlineOnConnect: false,
       emitOwnEvents: true,
       syncFullHistory: false,
       browser: ["Chrome (Linux)", "Chrome", "120.0.0"],
@@ -317,19 +347,17 @@ ids.forEach(id => {
 
 saveOwners()
 
+console.log("🤖 Logged in as:", botId)
 console.log("👑 Owners:", BOT_OWNERS)
-        console.log("🤖 Logged in as:", botId)
 
         // ✅ PREVENT MULTIPLE INTERVALS
-        if (!keepAliveStarted) {
-          keepAliveStarted = true
+        
           setInterval(() => {
             try {
               sock.sendPresenceUpdate("unavailable")
             } catch {}
-          }, 20000)
+          }, 1000)
         }
-      }
 
       if (connection === "close") {
          const statusCode = lastDisconnect?.error?.output?.statusCode
@@ -390,15 +418,12 @@ const cleanSender = normalizeJid(sender)
     const isDM = !isGroup
     const settings = getSettings("global")
     const group_settings = getGroup_Settings(jid || "default")
+    if (!msg.message) return
 
 
 // 🔥 FORCE DM PUSH RECOGNITION
 if (isDM) {
-  try {
-    await sock.sendMessage(jid, {
-      text: "" // silent ping (forces notification refresh internally)
-    })
-  } catch {}
+  await sock.sendPresenceUpdate("available", jid)
 }
 
 const body =
@@ -408,11 +433,9 @@ const body =
   msg.message?.videoMessage?.caption ||
   ""
 
+
 const reply = async (text) => {
   try {
-    // typing indicator
-    await sock.sendPresenceUpdate("composing", jid)
-
     await sock.sendMessage(jid, { text }, { quoted: msg })
 
     await sock.sendPresenceUpdate("paused", jid)
@@ -677,27 +700,56 @@ if (isDM) {
 },
 
 stickergif: async () => {
- if (!isOwner) return reply("❌ Owner only")
-  const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage
+  if (!isOwner) return reply("❌ Owner only")
+  const quoted =
+    msg.message?.extendedTextMessage?.contextInfo?.quotedMessage
 
   let mediaMessage =
     msg.message?.videoMessage ||
     quoted?.videoMessage
 
-  if (!mediaMessage) return reply("❌ Reply to a short video")
+  if (!mediaMessage) return reply("❌ Reply to a video")
 
-  const stream = await downloadContentFromMessage(mediaMessage, "video")
+  const input = "./temp.mp4"
+  const output = "./temp.webp"
 
-  let buffer = Buffer.from([])
-  for await (const chunk of stream) {
-    buffer = Buffer.concat([buffer, chunk])
+  try {
+    // 1. download video
+    const stream = await downloadContentFromMessage(mediaMessage, "video")
+
+    let buffer = Buffer.from([])
+    for await (const chunk of stream) {
+      buffer = Buffer.concat([buffer, chunk])
+    }
+
+    fs.writeFileSync(input, buffer)
+
+    // 2. convert with ffmpeg
+    exec(
+      `${ffmpegPath} -i ${input} -vf "scale=512:512:force_original_aspect_ratio=decrease" -t 6 -r 15 ${output}`,
+      async (err) => {
+        if (err) {
+          console.log(err)
+          return reply("❌ FFmpeg failed")
+        }
+
+        // 3. send sticker
+        const stickerBuffer = fs.readFileSync(output)
+
+        await sock.sendMessage(jid, {
+          sticker: stickerBuffer
+        }, { quoted: msg })
+
+        // cleanup
+        fs.unlinkSync(input)
+        fs.unlinkSync(output)
+      }
+    )
+
+  } catch (e) {
+    console.log(e)
+    reply("❌ Failed to create sticker")
   }
-
-  const stickerBuffer = await createSticker(buffer)
-
-  await sock.sendMessage(jid, {
-    sticker: stickerBuffer
-  }, { quoted: msg })
 },
 
 memesticker: async () => {
@@ -713,16 +765,25 @@ memesticker: async () => {
     </text>
   </svg>`
 
-  const buffer = Buffer.from(svg)
+  try {
+    const buffer = Buffer.from(svg)
 
-  const sticker = await sharp(buffer)
-    .resize(512, 512)
-    .webp()
-    .toBuffer()
+    const png = await sharp(buffer, {
+      density: 300 // 🔥 IMPORTANT FIX
+    })
+      .png()
+      .toBuffer()
 
-  await sock.sendMessage(jid, {
-    sticker
-  }, { quoted: msg })
+    const sticker = await createSticker(png)
+
+    await sock.sendMessage(jid, {
+      sticker
+    }, { quoted: msg })
+
+  } catch (e) {
+    console.log("MEME ERROR:", e)
+    reply("❌ Meme sticker failed")
+  }
 },
 
 captionsticker: async () => {
@@ -737,20 +798,20 @@ captionsticker: async () => {
 
   if (!text) return reply("❌ No caption found")
 
-  const canvas = createCanvas(512, 512)
-  const ctx = canvas.getContext("2d")
+const canvas = createCanvas(512, 512)
+const ctx = canvas.getContext("2d")
 
-  ctx.fillStyle = "#ffffff"
-  ctx.fillRect(0, 0, 512, 512)
+ctx.fillStyle = "white"
+ctx.fillRect(0, 0, 512, 512)
 
-  ctx.fillStyle = "#000"
-  ctx.font = "bold 36px Sans"
-  ctx.textAlign = "center"
+ctx.fillStyle = "black"
+ctx.font = "bold 40px Sans"
+ctx.textAlign = "center"
 
-  wrapText(ctx, text, 256, 256, 450, 40)
+ctx.fillText(text, 256, 256)
 
-  const buffer = canvas.toBuffer("image/png")
-  const sticker = await createSticker(buffer)
+const buffer = canvas.toBuffer("image/png")
+const sticker = await createSticker(buffer)
 
   await sock.sendMessage(jid, {
     sticker,
@@ -1387,7 +1448,9 @@ whoami: async () => {
       // ===== MENU =====
 menu: async () => {
 
+  const header = getHeader()
   const section = args[0]?.toLowerCase()
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms))
 
   // ===== FULL MENU =====
   if (!section) {
@@ -1450,52 +1513,63 @@ try {
 
   const time = moment().tz("Africa/Lagos").format("HH:mm:ss")
   const date = moment().tz("Africa/Lagos").format("DD/MM/YYYY")
+  const ownerText = BOT_OWNERS.length
+  ? BOT_OWNERS
+      .map(o => `• @${o.split("@")[0]}`)
+      .join("\n")
+  : "• No owners set"
 
-    let text = `
-╔══════════════════════╗
-║ 🤖 GIBBORLEE BOT MENU    ║
-╚══════════════════════╝
+let text = `
+${header}
+╰──────────────────────╯
 
-👤 USER PROFILE
+👑 *OWNER INFO*
+• Total Owners: ${BOT_OWNERS.length}
+
+${ownerText}
+
+━━━━━━━━━━━━━━━━━━━━
+
+👤 *USER PROFILE*
 • Name: ${pushName}
 • Role: ${role}
 
 ━━━━━━━━━━━━━━━━━━━━
-⏰ TIME INFO
+⏰ *TIME INFO*
 • Time: ${time}
 • Date: ${date}
 
 ━━━━━━━━━━━━━━━━━━━━
-📊 DEVICE STATS
+📊 *SYSTEM STATS*
 • ⚡ Uptime: ${uptimeText}
 • 💾 RAM Used: ${memory} MB
 • 🧠 Total RAM: ${totalRAM} GB
 • 🧹 Free RAM: ${freeRAM} GB
 
 ━━━━━━━━━━━━━━━━━━━━
-
-📌 Use:
-.menu protection
-.menu group
-.menu all
+📂 *MENU CATEGORIES*
+• 🛡️ protection
+• 👥 group
+• ⚙️ management
+• 🔗 join
+• 📣 tag
+• 🎨 media
+• 👑 owner
+• 🔐 mode
+• ℹ️ info
 
 ━━━━━━━━━━━━━━━━━━━━
-📂 Categories:
-• protection
-• group
-• management
-• join
-• tag
-• media
-• owner
-• mode
-• info
+⚡ 𝐆𝐈𝐁𝐁𝐎𝐑𝐋𝐄𝐄 𝐁𝐎𝐓 ⚡
+ Your wish is my command 🤭
+ ✨ Little guild Type *.menu <category>*
 `
 
-     return sock.sendMessage(from, {
-    image: { url: profilePic },
-    caption: text
-  }, { quoted: msg })
+
+    return sock.sendMessage(from, {
+  image: { url: profilePic },
+  caption: text,
+  mentions: BOT_OWNERS
+}, { quoted: msg })
   }
 
   // ===== FULL LIST =====
