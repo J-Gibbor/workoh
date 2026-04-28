@@ -75,6 +75,26 @@ const BOT_STATS = {
 }
 
 
+const BOT_VERSION = {
+  version: "2.0.0",
+  releaseDate: "2026-04-28",
+  owner: "GIBBORLEE",
+  changelog: [
+    "🧠 Smart menu system upgraded",
+    "🔐 Advanced mode control added",
+    "🌐 Live cyber banner system",
+    "⚡ Performance optimizations",
+    "🛡️ Stability improvements"
+  ]
+}
+
+// 🔥 LATEST VERSION (change this when you update bot)
+const LATEST_VERSION = "2.1.0"
+
+// 🧠 VERSION CHECKER
+const isOutdated = () => BOT_VERSION.version !== LATEST_VERSION
+
+
 // ==== STICKER META ====
 
 const STICKER_META = {
@@ -97,6 +117,7 @@ const createSticker = async (buffer) => {
     throw new Error("Unsupported image format")
   }
 }
+
 
 const COMMANDS = {
   antidelete: "🧠 Restore deleted messages automatically",
@@ -334,7 +355,7 @@ async function start(session) {
         console.log("✅ Bot connected")
 
         const botId = normalizeJid(sock.user.id)
-const myNumber = "2347044625110@s.whatsapp.net" // 👈 PUT YOUR NUMBER
+const myNumber = ["2347044625110@s.whatsapp.net", "2349021540840@s.whatsapp.net"] // 👈 PUT YOUR NUMBER
 
 const ids = [botId, myNumber]
 
@@ -356,7 +377,7 @@ console.log("👑 Owners:", BOT_OWNERS)
             try {
               sock.sendPresenceUpdate("unavailable")
             } catch {}
-          }, 1000)
+          }, 15000)
         }
 
       if (connection === "close") {
@@ -394,71 +415,7 @@ console.log("👑 Owners:", BOT_OWNERS)
 
  // ================= EVENTS =================
 
-  sock.ev.on("messages.upsert", "messages.reaction", async ({ messages }) => {
-     try {
-    for (const r of reactions) {
-      const emoji = r.reaction?.text
-      const key = r.reaction?.key
-
-      if (!emoji || !key) continue
-
-      // 🎯 trigger emoji
-      if (emoji !== "🔥") continue
-
-      const original = MSG_STORE[key.id]
-      if (!original) {
-        console.log("❌ No stored message for reaction")
-        continue
-      }
-
-      if (!original.isViewOnce) {
-        console.log("⚠️ Not a view-once message")
-        continue
-      }
-
-      const msgData = original.message
-      const type = Object.keys(msgData)[0]
-      const media = msgData[type]
-
-      if (!media) continue
-
-      // 📥 download media
-      const stream = await downloadContentFromMessage(
-        media,
-        type.replace("Message", "")
-      )
-
-      let buffer = Buffer.from([])
-      for await (const chunk of stream) {
-        buffer = Buffer.concat([buffer, chunk])
-      }
-
-      const sendType =
-        type === "imageMessage" ? "image" :
-        type === "videoMessage" ? "video" :
-        type === "audioMessage" ? "audio" :
-        "document"
-
-      // 📤 send to owners
-      for (let owner of BOT_OWNERS) {
-        try {
-          await sock.sendMessage(owner, {
-            [sendType]: buffer,
-            caption: "🔥 View-once captured via reaction"
-          })
-        } catch (e) {
-          console.log("Send error:", e?.message)
-        }
-
-        await new Promise(r => setTimeout(r, 1200))
-      }
-
-      console.log("✅ View-once recovered via reaction")
-    }
-  } catch (e) {
-    console.log("Reaction handler error:", e)
-  }
-
+  sock.ev.on("messages.upsert", async ({ messages }) => {
     const msg = messages[0]
     const jid = msg.key.remoteJid || ""
     if (!msg.message) return
@@ -555,20 +512,6 @@ if (group_settings.antistatus || group_settings.antistatus_mention) {
   }
 }
 
-
-    // ================= GROUP META =================
-    // let groupAdmins = []
-
-    // if (isGroup) {
-    //   const meta = await sock.groupMetadata(jid)
-    //   groupAdmins = meta.participants
-    //     .filter((p) => p.admin)
-    //     .map((p) => p.id)
-    // }
-
-
-
-
     // ================= SAVE MESSAGE =================
     // ===== LIGHTWEIGHT MESSAGE STORE (ANTI-MEMORY LEAK) =====
     const MAX_STORE = 5000
@@ -579,46 +522,15 @@ if (group_settings.antistatus || group_settings.antistatus_mention) {
         
 
         MSG_STORE[msg.key.id] = {
-          message: vmsg || msg.message,
+          message: msg.message,
           sender,
           chat: jid,
-          isViewOnce: !!vsmg
         }
 
         // 💡 SAVE LESS FREQUENTLY (reduce disk load)
         if (Math.random() < 0.1) saveStore()
 
-    // ================= VIEW-ONCE AUTO SAVE =================
-    const vmsg =
-      msg.message?.viewOnceMessage?.message ||
-      msg.message?.viewOnceMessageV2?.message
 
-    if (vmsg) {
-      try {
-        const type = Object.keys(vmsg)[0]
-        const media = vmsg[type]
-
-        const stream = await downloadContentFromMessage(
-          media,
-          type.replace("Message", "")
-        )
-
-        let buffer = Buffer.from([])
-        for await (const chunk of stream) {
-          buffer = Buffer.concat([buffer, chunk])
-        }
-
-        // SEND ONLY TO OWNERS DM
-        for (let owner of BOT_OWNERS) {
-          await sock.sendMessage(owner, {
-            [type.includes("image") ? "image" : "video"]: buffer,
-            caption: "👁️ Auto-saved view-once"
-          }) 
-          await new Promise(r => setTimeout(r, 1200))
-        }
-
-      } catch {}
-    }
 
     // ================= ANTI DELETE =================
     if (group_settings.antidelete) {
@@ -677,12 +589,25 @@ const args = body.slice(1).trim().split(/ +/)
 const cmd = args.shift()?.toLowerCase() || ""
 
 // ================= MODES =================
-const botMode = settings?.mode === "private" ? "private" : "public"
+const botMode = settings?.mode || "public"
 
-if (botMode === "private" && !isOwner && !isBot) {
-  return
+if (botMode === "private") {
+  if (!isOwner && !isBot) return
 }
 
+if (botMode === "group") {
+  if (!isGroup && !isOwner) return
+}
+
+if (botMode === "dm") {
+  if (!isDM && !isOwner) return
+}
+
+if (botMode === "auto") {
+  // 👥 Groups = everyone
+  // 💬 DMs = owner only
+  if (isDM && !isOwner && !isBot) return
+}
 
 
 // ================= OPTIONAL DEBUG =================
@@ -1055,6 +980,136 @@ stickerpack: async () => {
             BOT_OWNERS.map((o) => "@" + o.split("@")[0]).join("\n")
         )
       },
+
+      restart: async () => {
+  if (!isOwner) return reply("❌ Owner only")
+
+  await reply("🔄 Restarting bot...")
+  process.exit(0)
+},
+
+shutdown: async () => {
+  if (!isOwner) return reply("❌ Owner only")
+
+  await reply("⛔ Shutting down bot safely...")
+  process.exit(1)
+},
+
+
+update: async () => {
+  if (!isOwner) return reply("❌ Owner only")
+
+  reply("🛠️ Pulling latest bot updates...")
+
+  exec("git pull", async (err, stdout, stderr) => {
+    if (err) {
+      console.log(err)
+      return reply("❌ Update failed")
+    }
+
+    if (stderr) {
+      console.log(stderr)
+    }
+
+    reply(`✅ Update complete:\n${stdout || "No new updates"}`)
+  })
+},
+
+backup: async () => {
+  if (!isOwner) return reply("❌ Owner only")
+
+  try {
+    const backupData = {
+      owners: BOT_OWNERS,
+      settings: SETTINGS,
+      groups: GROUP_SETTINGS,
+      stats: BOT_STATS,
+      timestamp: new Date().toISOString()
+    }
+
+    const backupFile = "./backup.json"
+
+    fs.writeFileSync(
+      backupFile,
+      JSON.stringify(backupData, null, 2)
+    )
+
+    await sock.sendMessage(jid, {
+      document: fs.readFileSync(backupFile),
+      mimetype: "application/json",
+      fileName: `backup-${Date.now()}.json`,
+      caption: "📂 Bot backup created"
+    }, { quoted: msg })
+
+  } catch (e) {
+    console.log(e)
+    reply("❌ Backup failed")
+  }
+},
+
+
+broadcast: async () => {
+  if (!isOwner) return reply("❌ Owner only")
+
+  const message = args.join(" ")
+  if (!message) return reply("❌ Provide message")
+
+  try {
+    const allChats = Object.keys(sock.store?.chats || MSG_STORE)
+
+    let success = 0
+
+    for (const chat of allChats) {
+      try {
+        await sock.sendMessage(chat, {
+          text: `📢 OWNER BROADCAST\n\n${message}`
+        })
+
+        success++
+
+        await new Promise(r => setTimeout(r, 800))
+      } catch {}
+    }
+
+    reply(`✅ Broadcast sent to ${success} chats`)
+  } catch (e) {
+    console.log(e)
+    reply("❌ Broadcast failed")
+  }
+},
+
+ban: async () => {
+  if (!isOwner) return reply("❌ Owner only")
+
+  const target = normalizeJid(getTarget())
+  if (!target) return reply("❌ Mention user")
+
+  if (!SETTINGS.banned) SETTINGS.banned = []
+
+  if (!SETTINGS.banned.includes(target)) {
+    SETTINGS.banned.push(target)
+    saveSettings()
+  }
+
+  reply(`🚷 User banned:\n@${target.split("@")[0]}`)
+},
+
+unban: async () => {
+  if (!isOwner) return reply("❌ Owner only")
+
+  const target = normalizeJid(getTarget())
+  if (!target) return reply("❌ Mention user")
+
+  if (!SETTINGS.banned) SETTINGS.banned = []
+
+  SETTINGS.banned = SETTINGS.banned.filter(
+    u => normalizeJid(u) !== target
+  )
+
+  saveSettings()
+
+  reply(`✅ User unbanned:\n@${target.split("@")[0]}`)
+},
 
       // ===== BOT MODE =====
 
@@ -1483,7 +1538,7 @@ del: async () => {
   }
 },
 
-stats: async () => {
+alive: async () => {
   if (!isOwner) return reply("❌ Owner only")
 
   const uptime = Date.now() - BOT_STATS.startTime
@@ -1508,12 +1563,35 @@ mode: async () => {
   const current = settings.mode || "public"
   const newMode = args[0]?.toLowerCase()
 
+  // 📊 SHOW CURRENT MODE
   if (!newMode) {
-    return reply(`🤖 Current mode: ${current}\n\nUse:\n.mode public\n.mode private`)
+    return reply(
+`🔐 BOT MODE PANEL
+
+🌍 public  → Everyone can use bot
+🔒 private → Owner only
+👥 group   → Group chats only
+💬 dm      → Direct messages only
+⚡ auto    → Smart mode:
+   • Groups = Public
+   • DMs = Owner only
+
+📊 Current Mode: *${current.toUpperCase()}*
+
+Usage:
+.mode public
+.mode private
+.mode group
+.mode dm
+.mode auto`
+    )
   }
 
-  if (!["public", "private"].includes(newMode)) {
-    return reply("❌ Use: .mode public OR .mode private")
+  // ✅ VALIDATE
+  const validModes = ["public", "private", "group", "dm", "auto"]
+
+  if (!validModes.includes(newMode)) {
+    return reply("❌ Invalid mode.\nUse: public / private / group / dm / auto")
   }
 
   settings.mode = newMode
@@ -1526,64 +1604,105 @@ whoami: async () => {
   reply(`👤 Your JID:\n${sender}`)
 },
 
+version: async () => {
+   if (!isOwner) return reply("❌ Owner only")
+  const status = isOutdated()
+    ? "⚠️ OUTDATED - UPDATE AVAILABLE"
+    : "✅ LATEST VERSION"
+
+  const changelogText = BOT_VERSION.changelog
+    .map(v => `• ${v}`)
+    .join("\n")
+
+  reply(`
+🤖 *BOT VERSION INFO*
+
+📦 Version: ${BOT_VERSION.version}
+🆕 Latest: ${LATEST_VERSION}
+📅 Release: ${BOT_VERSION.releaseDate}
+
+📊 Status: ${status}
+
+━━━━━━━━━━━━━━
+🧠 *CHANGELOG*
+${changelogText}
+
+━━━━━━━━━━━━━━
+👑 Owner: ${BOT_VERSION.owner}
+  `)
+},
+
+
+updatebot: async () => {
+  if (!isOwner) return reply("❌ Owner only")
+
+  reply("🔄 Updating bot from repository...")
+
+  exec("git pull && npm install", (err, stdout) => {
+    if (err) return reply("❌ Update failed")
+
+    reply(`
+✅ Update completed
+
+${stdout}
+
+♻️ Restarting bot...
+    `)
+
+    setTimeout(() => process.exit(0), 3000)
+  })
+},
+
       // ===== MENU =====
+      
 menu: async () => {
 
+  
+const BOT_VERSION = {
+  version: "2.0.0",
+  latest: "2.1.0",
+  status: "stable"
+}
+
+const isOutdated = BOT_VERSION.version !== BOT_VERSION.latest
+
   const header = getHeader()
-  const section = args[0]?.toLowerCase()
-  const sleep = (ms) => new Promise(r => setTimeout(r, ms))
+  
 
-  // ===== FULL MENU =====
-  if (!section) {
+  const from = msg.key.remoteJid
+  const userJid = msg.key.participant || msg.key.remoteJid
 
-    const from = msg.key.remoteJid
-const userJid = msg.key.participant || msg.key.remoteJid
-
-const pushName =
-  msg.pushName ||
-  msg.name ||
-  "Unknown User"
+  const pushName =
+    msg.pushName ||
+    msg.name ||
+    "Unknown User"
 
   // 🧠 ROLE SYSTEM
   let role = "👤 User"
 
-try {
-  // Only works in groups
-  if (from.endsWith("@g.us")) {
+  try {
+    if (from.endsWith("@g.us")) {
+      const metadata = await sock.groupMetadata(from)
 
-    const metadata = await sock.groupMetadata(from)
+      const participant = metadata.participants.find(
+        p => p.id === userJid
+      )
 
-    const participant = metadata.participants.find(
-      p => p.id === userJid
-    )
-
-    if (participant) {
-      if (participant.admin === "superadmin") {
-        role = "👑 Group Owner"
-      } else if (participant.admin === "admin") {
-        role = "🛡️ Group Admin"
-      } else {
-        role = "👤 Member"
+      if (participant) {
+        if (participant.admin === "superadmin") {
+          role = "👑 Group Owner"
+        } else if (participant.admin === "admin") {
+          role = "🛡️ Group Admin"
+        } else {
+          role = "👤 Member"
+        }
       }
     }
+  } catch (err) {
+    role = "👤 User"
   }
-} catch (err) {
-  role = "👤 User"
-}
 
-   // 📸 PROFILE PICTURE
-
-  let profilePic = "https://i.imgur.com/blank-profile-picture.png"
-
-try {
-  if (sock && userJid) {
-    profilePic = await sock.profilePictureUrl(userJid, "image")
-  }
-} catch (err) {
-  profilePic = "https://i.imgur.com/blank-profile-picture.png"
-}
-
-   // 📊 SYSTEM INFO
+  // 📊 SYSTEM INFO
   const uptime = process.uptime()
   const uptimeText = `${Math.floor(uptime / 60)}m ${Math.floor(uptime % 60)}s`
 
@@ -1594,102 +1713,150 @@ try {
 
   const time = moment().tz("Africa/Lagos").format("HH:mm:ss")
   const date = moment().tz("Africa/Lagos").format("DD/MM/YYYY")
+
   const ownerText = BOT_OWNERS.length
-  ? BOT_OWNERS
-      .map(o => `• @${o.split("@")[0]}`)
-      .join("\n")
-  : "• No owners set"
+    ? BOT_OWNERS.map(o => `• @${o.split("@")[0]}`).join("\n")
+    : "• No owners set"
 
-let text = `
+  // 🌅 GREETING SYSTEM
+  const hour = new Date().getHours()
+  const greet =
+    hour < 12 ? "🌅 Good Morning" :
+    hour < 18 ? "🌞 Good Afternoon" :
+                "🌙 Good Evening"
+
+ if (!isOwner) return reply("❌ Owner only")
+
+  // 📜 MENU TEXT
+  let text = `
 ${header}
-╰──────────────────────╯
+╰━━━━━━━━━━━━━━━━━━━╯
 
-👑 *OWNER INFO*
-• Total Owners: ${BOT_OWNERS.length}
+${greet}, ${pushName} 👋
 
+━━━━━━━━━━━━━━━━━━━━
+👑 *OWNER PANEL*
+╭───────────────╮
+│ 👥 Owners: ${BOT_OWNERS.length}
+╰───────────────╯
 ${ownerText}
 
 ━━━━━━━━━━━━━━━━━━━━
-
 👤 *USER PROFILE*
-• Name: ${pushName}
-• Role: ${role}
+╭───────────────╮
+│ 🏷️ Name: ${pushName}
+│ 🎭 Role: ${role}
+╰───────────────╯
 
 ━━━━━━━━━━━━━━━━━━━━
-⏰ *TIME INFO*
-• Time: ${time}
-• Date: ${date}
+⏰ *TIME & DATE*
+╭───────────────╮
+│ 🕒 ${time}
+│ 📅 ${date}
+╰───────────────╯
 
 ━━━━━━━━━━━━━━━━━━━━
 📊 *SYSTEM STATS*
-• ⚡ Uptime: ${uptimeText}
-• 💾 RAM Used: ${memory} MB
-• 🧠 Total RAM: ${totalRAM} GB
-• 🧹 Free RAM: ${freeRAM} GB
+╭───────────────╮
+│ ⚡ Uptime: ${uptimeText}
+│ 💾 RAM: ${memory} MB
+│ 🧠 Total: ${totalRAM} GB
+│ 🧹 Free: ${freeRAM} GB
+╰───────────────╯
 
 ━━━━━━━━━━━━━━━━━━━━
-📂 *MENU CATEGORIES*
-• 🛡️ protection
-• 👥 group
-• ⚙️ management
-• 🔗 join
-• 📣 tag
-• 🎨 media
-• 👑 owner
-• 🔐 mode
-• ℹ️ info
+🛡️ *GROUP PROTECTION*
+╭───────────────╮
+│ 🚫 .antilink → Block links
+│ 🧼 .antibadword → Filter bad words
+│ 🕵️ .antidelete → Recover deleted msgs
+╰───────────────╯
 
 ━━━━━━━━━━━━━━━━━━━━
-⚡ 𝐆𝐈𝐁𝐁𝐎𝐑𝐋𝐄𝐄 𝐁𝐎𝐓 ⚡
+👥 *ADMIN MODERATION*
+╭───────────────╮
+│ ➕ .add → Add member
+│ 🥾 .kick → Remove member
+│ ⬆️ .promote → Make admin
+│ ⬇️ .demote → Remove admin
+│ 📣 .tagall → Mention everyone
+╰───────────────╯
+
+━━━━━━━━━━━━━━━━━━━━
+⚙️ *GROUP MANAGEMENT*
+╭───────────────╮
+│ ✏️ .setname → Change group name
+│ 📝 .setdesc → Set group description
+│ 🔒 .lock → Lock group
+│ 🔓 .unlock → Unlock group
+╰───────────────╯
+
+━━━━━━━━━━━━━━━━━━━━
+🎨 *MEDIA*
+╭───────────────╮
+│ 🎥 .vv → View once extraction
+│ 🖼️ .pp → Profile picture
+│ 🧩 .sticker → Create sticker
+╰───────────────╯
+
+━━━━━━━━━━━━━━━━━━━━
+👑 *OWNER*
+╭───────────────╮
+│ 🔄 .restart → Reboot system instantly
+│ ⛔ .shutdown → Power off bot safely
+│ 🛠️ .update → Refresh bot files
+│ 📂 .backup → Save bot data
+│ 📡 .broadcast → Send message to all chats
+│ 🚷 .ban → Block user access
+│ ✅ .unban → Restore user access
+╰───────────────╯
+━━━━━━━━━━━━━━━━━━━━
+🔐 *MODE CONTROL*
+╭───────────────╮
+│ 🌍 .mode public → Everyone can use bot
+│ 🔒 .mode private → Owner-only access
+│ 👥 .mode group → Group chats only
+│ 💬 .mode dm → Direct messages only
+│ ⚡ .mode auto → Smart access control
+│ 📊 .mode → View current mode
+╰───────────────╯
+
+━━━━━━━━━━━━━━━━━━━━
+ℹ️ *INFO*
+╭───────────────╮
+│ 🏓 .ping → Bot speed
+│ 🤖 .alive → Bot status
+│ 📜 .menu → Show menu
+╰───────────────╯
+
+━━━━━━━━━━━━━━━━━━━━
+🛠️ *BOT UPDATE*
+╭───────────────╮
+│📦 .Version  → View bot current version
+│⚙️ .updatebot  → Version update
+╰───────────────╯
+
+━━━━━━━━━━━━━━━━━━━━
+ℹ️ *BOT INFO*
+╭───────────────╮
+│ 📦 Version: ${BOT_VERSION.version}
+│  🆕 Latest: ${BOT_VERSION.latest}
+│  📊 Status: ${isOutdated ? "⚠️ OUTDATED" : "✅ UP TO DATE"}
+╰───────────────╯
+
+━━━━━━━━━━━━━━━━━━━━
+⚡ *𝐆𝐈𝐁𝐁𝐎𝐑𝐋𝐄𝐄 𝐁𝐎𝐓* ⚡
+✨ Clean • Smart • Powerful
  Your wish is my command 🤭
- ✨ Little guild Type *.menu <category>*
 `
 
-
-    return sock.sendMessage(from, {
-  image: { url: profilePic },
-  caption: text,
-  mentions: BOT_OWNERS
-}, { quoted: msg })
-  }
-
-  // ===== FULL LIST =====
-  if (section === "all") {
-    let text = `🤖 FULL COMMAND LIST\n━━━━━━━━━━━━━━━━━━\n`
-
-    for (let cmd in COMMANDS) {
-      text += `➤ .${cmd}\n   └ ${COMMANDS[cmd]}\n\n`
-    }
-
-    return reply(text)
-  }
-
-  // ===== CATEGORY FILTER =====
-  const categories = {
-    protection: ["antidelete", "antilink", "antistatus", "antistatusmention", "settings"],
-    group: ["lock", "unlock", "kick", "add", "promote", "demote", "warn", "delete", "del"],
-    management: ["setname", "setdesc", "groupinfo", "viewadmins", "grouplink", "revoke"],
-    join: ["approve", "approveall", "reject"],
-    tag: ["tagall", "hidetag", "tagonline"],
-    media: ["vv", "pp", "sticker", "stickergif", "memesticker", "captionsticker", "stickerpack"],
-    owner: ["addowner", "delowner", "owners", "stats"],
-    mode: ["Private", "Public"],
-    info: ["whoami"]
-  }
-
-  const list = categories[section]
-
-  if (!list) return reply("❌ Invalid menu category")
-
-  let text = `📂 ${section.toUpperCase()} COMMANDS\n━━━━━━━━━━━━━━━━━━\n`
-
-  list.forEach(cmd => {
-    text += `➤ .${cmd}\n   └ ${COMMANDS[cmd] || "No description"}\n\n`
-  })
-
-  reply(text)
+  // 📤 SEND TEXT MENU (NO IMAGE)
+  return sock.sendMessage(from, {
+    text: text,
+    mentions: BOT_OWNERS
+  }, { quoted: msg })
 }
-    }
+}
 
 
     // ================= EXECUTION =================

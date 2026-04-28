@@ -12,7 +12,7 @@
     "antistatus_mention": false
   },
   "231585072828587@lid": {
-    "antidelete": false,
+    "antidelete": true,
     "antilink": false,
     "antistatus": false,
     "antistatus_mention": false
@@ -30,7 +30,7 @@
     "antistatus_mention": false
   },
   "79921053491262@lid": {
-    "antidelete": false,
+    "antidelete": true,
     "antilink": false,
     "antistatus": false,
     "antistatus_mention": false
@@ -240,6 +240,18 @@
     "antistatus_mention": false
   },
   "120363287930032576@g.us": {
+    "antidelete": false,
+    "antilink": false,
+    "antistatus": false,
+    "antistatus_mention": false
+  },
+  "37959508164684@lid": {
+    "antidelete": false,
+    "antilink": false,
+    "antistatus": false,
+    "antistatus_mention": false
+  },
+  "243336321437778@lid": {
     "antidelete": false,
     "antilink": false,
     "antistatus": false,
