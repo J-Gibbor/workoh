@@ -75,7 +75,70 @@ const BOT_STATS = {
 }
 
 let warns = {} // already exists in your code, keep it global
+// ================= WARN DATABASE =================
+const WARN_DB = global.WARN_DB || (global.WARN_DB = {})
+
 const WARN_LIMIT = 3
+
+const saveWarnDB = () => {
+  try {
+    fs.writeFileSync(
+      "./warn_db.json",
+      JSON.stringify(WARN_DB, null, 2)
+    )
+  } catch (e) {
+    console.log("WARN SAVE ERROR:", e)
+  }
+}
+
+const loadWarnDB = () => {
+  try {
+    if (fs.existsSync("./warn_db.json")) {
+      Object.assign(
+        WARN_DB,
+        JSON.parse(fs.readFileSync("./warn_db.json"))
+      )
+    }
+  } catch (e) {
+    console.log("WARN LOAD ERROR:", e)
+  }
+}
+
+loadWarnDB()
+
+const addWarn = async (sock, jid, user, reason) => {
+  if (!WARN_DB[jid]) WARN_DB[jid] = {}
+  if (!WARN_DB[jid][user]) WARN_DB[jid][user] = []
+
+  WARN_DB[jid][user].push({
+    reason,
+    time: Date.now()
+  })
+
+  const count = WARN_DB[jid][user].length
+
+  if (count >= WARN_LIMIT) {
+    try {
+      await sock.groupParticipantsUpdate(jid, [user], "remove")
+
+      delete WARN_DB[jid][user]
+
+      await sock.sendMessage(jid, {
+        text: `🚫 @${user.split("@")[0]} removed (${reason})`,
+        mentions: [user]
+      })
+    } catch (e) {
+      console.log("WARN REMOVE ERROR:", e)
+    }
+  } else {
+    await sock.sendMessage(jid, {
+      text: `⚠️ @${user.split("@")[0]} warning ${count}/${WARN_LIMIT}\nReason: ${reason}`,
+      mentions: [user]
+    })
+  }
+
+  saveWarnDB()
+}
 
 // ===== OPTIONAL LOCAL BACKUP =====
 const BACKUP_DIR = "./backups"
@@ -216,44 +279,6 @@ const createSticker = async (buffer) => {
   }
 }
 
-// =======WARN DATABASE ===============
-const WARN_DB = global.WARN_DB || (global.WARN_DB = {})
-
-const saveWarnDB = () => {
-  fs.writeFileSync("./warn_db.json", JSON.stringify(WARN_DB, null, 2))
-}
-
-const loadWarnDB = () => {
-  try {
-    if (fs.existsSync("./warn_db.json")) {
-      Object.assign(WARN_DB, JSON.parse(fs.readFileSync("./warn_db.json")))
-    }
-  } catch (e) {
-    console.log("Warn DB load error:", e)
-  }
-}
-
-loadWarnDB()
-
-// ================= AUTO CLEANER  =================
-setInterval(() => {
-  for (const group in WARN_DB) {
-    for (const user in WARN_DB[group]) {
-      if (!WARN_DB[group][user] || WARN_DB[group][user].length === 0) {
-        delete WARN_DB[group][user]
-      }
-    }
-
-    // remove empty groups
-    if (Object.keys(WARN_DB[group]).length === 0) {
-      delete WARN_DB[group]
-    }
-  }
-
-  saveWarnDB()
-}, 24 * 60 * 60 * 1000)
-
-
   // =====MENU COMMANDS ====
 
 const COMMANDS = {
@@ -337,6 +362,7 @@ const groupCommands = (cmdObj) => {
     "⚙️ GROUP MANAGEMENT": [],
     "⚠️ WARNING SYSTEM": [],
     "🎨 MEDIA": [],
+    "📦 STICKER PACK SYSTEM": [],
     "👑 OWNER CONTROL": [],
     "🔐 MODE CONTROL": [],
     "ℹ️ INFO": [],
@@ -374,7 +400,7 @@ const groupCommands = (cmdObj) => {
       groups["🔐 MODE CONTROL"].push(line)
     }
 
-    else if (["alive","whoami","version", "ping" ,"stats"].includes(cmd)) {
+    else if (["alive", "ping", "whoami","version","stats"].includes(cmd)) {
       groups["ℹ️ INFO"].push(line)
     }
 
@@ -382,8 +408,8 @@ const groupCommands = (cmdObj) => {
       groups["🛠️ BOT UPDATE"].push(line)
     }
 
-    else if (["packcreate","packadd","packview","packdelete","packexport"].includes(cmd)) {
-  add("📦 STICKER PACK SYSTEM", cmd, desc)
+else if (["packcreate","packadd","packview","packdelete","packexport"].includes(cmd)) {
+  groups["📦 STICKER PACK SYSTEM"].push(`│ .${cmd} → ${cmdObj[cmd]}`)
 }
   }
 
@@ -471,6 +497,7 @@ const getPermissions = ({ msg, sock, BOT_OWNERS, groupAdmins }) => {
     isAdmin
   }
 }
+
 // ================= FILES =================
 const GROUP_SETTINGS_FILE = "./group-settings.json"
 const STORE_FILE = "./msg-store.json"
@@ -602,7 +629,7 @@ console.log("👑 Owners:", BOT_OWNERS)
         
           setInterval(() => {
               sock.sendPresenceUpdate("unavailable")
-          }, 30000)
+          }, 60000)
         }
 
       if (connection === "close") {
@@ -631,8 +658,6 @@ console.log("👑 Owners:", BOT_OWNERS)
     setTimeout(() => start(session), 5000)
       }
     })
-
-  let warns = {}
 
   const react = (jid, key, emoji) =>
     sock.sendMessage(jid, { react: { text: emoji, key } })
@@ -704,74 +729,6 @@ const reply = async (text) => {
     const getTarget = () =>
       msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0]
 
-    const addWarn = async (jid, user, reason) => {
-  warns[user] = (warns[user] || 0) + 1
-
-  const count = warns[user]
-
-  if (count >= WARN_LIMIT) {
-    try {
-      await sock.groupParticipantsUpdate(jid, [user], "remove")
-      delete warns[user]
-
-      await sock.sendMessage(jid, {
-        text: `🚫 @${user.split("@")[0]} removed (${reason})`,
-        mentions: [user]
-      })
-    } catch {}
-  } else {
-    await sock.sendMessage(jid, {
-      text: `⚠️ @${user.split("@")[0]} warning ${count}/${WARN_LIMIT}\nReason: ${reason}`,
-      mentions: [user]
-    })
-  }
-}
-
-    // ================= ANTI STATUS =================
-if (group_settings.antistatus && msg.key.remoteJid === "status@broadcast") {
-  try {
-    await sock.readMessages([msg.key])
-
-    await addWarn(jid, sender, "Status viewing blocked")
-
-  } catch {}
-}
-
-//  =========ANTI STATUS_MENTION=======
-
-if (group_settings.antistatus_mention) {
-  const text =
-    msg.message?.extendedTextMessage?.text ||
-    msg.message?.conversation ||
-    ""
-
-  if (text.includes("@")) {
-    await sock.sendMessage(jid, { delete: msg.key })
-
-    await addWarn(jid, sender, "Status mention detected")
-
-    await sock.sendMessage(jid, {
-      text: "🚫 Status mention blocked"
-    })
-  }
-}
-
-// ================= ANTI BAD WORD =================
-if (isGroup && group_settings.antibadword && body) {
-  const badwords = ["fuck", "shit", "bitch", "asshole"]
-
-  if (badwords.some(w => body.toLowerCase().includes(w))) {
-    if (!isAdmin && !isOwner) {
-      await sock.sendMessage(jid, { delete: msg.key })
-
-      await addWarn(jid, sender, "Bad word detected")
-      await react(jid, msg.key, "🧼")
-
-      return
-    }
-  }
-}
-
     // ================= SAVE MESSAGE =================
     // ===== LIGHTWEIGHT MESSAGE STORE (ANTI-MEMORY LEAK) =====
     const MAX_STORE = 5000
@@ -790,7 +747,66 @@ if (isGroup && group_settings.antibadword && body) {
         // 💡 SAVE LESS FREQUENTLY (reduce disk load)
         if (Math.random() < 0.1) saveStore()
 
+// ================= ANTI-LINK =================
+  if (isGroup && group_settings.antilink && body) {
+    const links = ["http", "wa.me", ".com", ".net", "chat.whatsapp.com"]
 
+    if (links.some(l => body.toLowerCase().includes(l))) {
+      if (!isAdmin && !isOwner) {
+
+        await sock.sendMessage(jid, { delete: msg.key })
+
+        await addWarn(sock, jid, sender, "Link detected")
+
+        return
+      }
+    }
+  }
+
+   if (group_settings.antistatus && msg.key.remoteJid === "status@broadcast") {
+    try {
+      await sock.readMessages([msg.key])
+
+      await addWarn(sock, jid, sender, "Status viewing blocked")
+
+    } catch (e) {
+      console.log(e)
+    }
+  }
+
+   if (group_settings.antistatus_mention) {
+    const text =
+      msg.message?.extendedTextMessage?.text ||
+      msg.message?.conversation ||
+      ""
+
+    if (text.includes("@")) {
+      await sock.sendMessage(jid, { delete: msg.key })
+
+      await addWarn(sock, jid, sender, "Status mention detected")
+
+      await sock.sendMessage(jid, {
+        text: "🚫 Status mention blocked"
+      })
+    }
+  }
+
+   if (isGroup && group_settings.antibadword && body) {
+    const badwords = ["fuck", "shit", "bitch", "asshole"]
+
+    if (badwords.some(w => body.toLowerCase().includes(w))) {
+      if (!isAdmin && !isOwner) {
+
+        await sock.sendMessage(jid, { delete: msg.key })
+
+        await addWarn(sock, jid, sender, "Bad word detected")
+
+        await react(jid, msg.key, "🧼")
+
+        return
+      }
+    }
+  }
 
     // ================= ANTI DELETE =================
     if (group_settings.antidelete) {
@@ -815,22 +831,7 @@ if (isGroup && group_settings.antibadword && body) {
       }
     }
 
-    // ================= ANTI LINK =================
-  if (isGroup && group_settings.antilink && body) {
-  const links = ["http", "wa.me", ".com", ".net", "chat.whatsapp.com"]
-
-  if (links.some(l => body.toLowerCase().includes(l))) {
-    if (!isAdmin && !isOwner) {
-      await sock.sendMessage(jid, { delete: msg.key })
-
-      await addWarn(jid, sender, "Link detected")
-      await react(jid, msg.key, "🚫")
-
-      return
-    }
-  }
-}
-
+   
 
     // ================= COMMAND =================
  // ================= COMMAND HANDLER =================

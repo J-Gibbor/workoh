@@ -21,7 +21,8 @@
     "antidelete": false,
     "antilink": true,
     "antistatus": false,
-    "antistatus_mention": false
+    "antistatus_mention": false,
+    "antibadword": true
   },
   "11807385202835@lid": {
     "antidelete": false,
@@ -270,6 +271,27 @@
     "antistatus_mention": false
   },
   "120363411293855275@g.us": {
+    "antidelete": false,
+    "antibadword": false,
+    "antilink": false,
+    "antistatus": false,
+    "antistatus_mention": false
+  },
+  "120363406180522328@g.us": {
+    "antidelete": false,
+    "antibadword": false,
+    "antilink": false,
+    "antistatus": false,
+    "antistatus_mention": false
+  },
+  "120363162017743338@g.us": {
+    "antidelete": false,
+    "antibadword": false,
+    "antilink": false,
+    "antistatus": false,
+    "antistatus_mention": false
+  },
+  "120363024545129528@g.us": {
     "antidelete": false,
     "antibadword": false,
     "antilink": false,
