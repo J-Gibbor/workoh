@@ -387,10 +387,12 @@ const COMMANDS = {
   stats: "📊 Bot usage statistics",
   ping: "🏓 Check bot response speed (latency test)",
 
-  // 🛠️ UPDATE
-  updatebot: "🚀 Deploy latest version",
-  backupbot: "💾 Create system backup",
-  rollbackbot: "♻️ Restore previous backup",
+  // 🛠️ BOT UPDATE
+backupbot: "💾 Create full system backup",
+backupfiles: "📂 View all saved backup files",
+extractbackup: "📦 Extract backup archive contents",
+rollbackbot: "♻️ Restore latest backup version",
+updatebot: "🚀 Update bot from GitHub safely",
 
   // 📦 STICKER PACK SYSTEM
 packcreate: "📦 Create a new sticker pack",
@@ -449,7 +451,7 @@ const groupCommands = (cmdObj) => {
       groups["ℹ️ INFO"].push(line)
     }
 
-    else if (["updatebot","backupbot","rollbackbot"].includes(cmd)) {
+    else if (["updatebot","backupbot","backupfiles","extractbackup","rollbackbot"].includes(cmd)) {
       groups["🛠️ BOT UPDATE"].push(line)
     }
 
@@ -2399,6 +2401,135 @@ backupbot: async () => {
   } catch (e) {
     console.log(e)
     reply("❌ Backup failed")
+  }
+},
+
+extractbackup: async () => {
+  if (!isOwner) return reply("❌ Owner only")
+
+  try {
+    const version = getVersionData()
+
+    // ===== CHECK BACKUP HISTORY =====
+    if (
+      !version.backupHistory ||
+      !Array.isArray(version.backupHistory) ||
+      version.backupHistory.length === 0
+    ) {
+      return reply("❌ No backup history found")
+    }
+
+    // ===== SELECT BACKUP =====
+    // Usage:
+    // .extractbackup latest
+    // .extractbackup 2
+    const option = args[0]?.toLowerCase() || "latest"
+
+    let backupEntry
+
+    if (option === "latest") {
+      backupEntry = version.backupHistory[0]
+    } else {
+      const index = parseInt(option) - 1
+
+      if (
+        isNaN(index) ||
+        index < 0 ||
+        index >= version.backupHistory.length
+      ) {
+        return reply(
+`❌ Invalid backup number
+
+Usage:
+.extractbackup latest
+.extractbackup 1
+.extractbackup 2`
+        )
+      }
+
+      backupEntry = version.backupHistory[index]
+    }
+
+    if (!backupEntry?.path || !fs.existsSync(backupEntry.path)) {
+      return reply("❌ Backup file missing")
+    }
+
+    // ===== EXTRACT FOLDER =====
+    const extractDir = `./extracted_backup_${Date.now()}`
+
+    if (!fs.existsSync(extractDir)) {
+      fs.mkdirSync(extractDir, { recursive: true })
+    }
+
+    await reply(`📦 Extracting backup...\n${backupEntry.path}`)
+
+    // ===== WINDOWS / LINUX SAFE =====
+    exec(
+      process.platform === "win32"
+        ? `powershell Expand-Archive -Path "${backupEntry.path}" -DestinationPath "${extractDir}" -Force`
+        : `unzip -o "${backupEntry.path}" -d "${extractDir}"`,
+      async (err, stdout, stderr) => {
+        if (err) {
+          console.log("EXTRACT ERROR:", err)
+          return reply("❌ Backup extraction failed")
+        }
+
+        // ===== SEND RESULT =====
+        let files = []
+
+        try {
+          files = fs.readdirSync(extractDir)
+        } catch {}
+
+        await reply(
+`✅ Backup extracted successfully
+
+📂 Folder:
+${extractDir}
+
+📄 Files Found:
+${files.slice(0, 20).join("\n") || "No files"}
+
+⚠️ Use file manager/server access to inspect full backup`
+        )
+      }
+    )
+
+  } catch (e) {
+    console.log("EXTRACTBACKUP ERROR:", e)
+    reply(`❌ Extraction failed: ${e.message}`)
+  }
+},
+
+// ================= OPTIONAL: LIST BACKUPS =================
+backupfiles: async () => {
+  if (!isOwner) return reply("❌ Owner only")
+
+  try {
+    const version = getVersionData()
+
+    if (
+      !version.backupHistory ||
+      !version.backupHistory.length
+    ) {
+      return reply("❌ No backups available")
+    }
+
+    let text = "💾 *BACKUP HISTORY*\n\n"
+
+    version.backupHistory.forEach((b, i) => {
+      text +=
+`${i + 1}. 📦 ${b.path}
+🕒 ${new Date(b.time).toLocaleString()}
+
+`
+    })
+
+    reply(text)
+
+  } catch (e) {
+    console.log(e)
+    reply("❌ Failed to load backups")
   }
 },
 
