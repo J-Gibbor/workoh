@@ -181,30 +181,21 @@ const saveVersionData = (data) => {
 
 // ===== SAFE DEPLOY HOOK =====
 const triggerRenderDeploy = async () => {
-  return new Promise((resolve, reject) => {
-    const hook = process.env.RENDER_DEPLOY_HOOK
+  const hook = process.env.RENDER_DEPLOY_HOOK
 
-    if (!hook) {
-      return reject(new Error("Missing RENDER_DEPLOY_HOOK"))
-    }
+  if (!hook) {
+    throw new Error("Missing RENDER_DEPLOY_HOOK in environment")
+  }
 
-    const req = https.request(hook, { method: "POST" }, (res) => {
-      let data = ""
-
-      res.on("data", chunk => data += chunk)
-
-      res.on("end", () => {
-        if (res.statusCode >= 200 && res.statusCode < 300) {
-          resolve(data)
-        } else {
-          reject(new Error(`Deploy failed: ${res.statusCode}`))
-        }
-      })
-    })
-
-    req.on("error", reject)
-    req.end()
+  const res = await fetch(hook, {
+    method: "POST"
   })
+
+  if (!res.ok) {
+    throw new Error(`Render deploy failed: ${res.status}`)
+  }
+
+  return true
 }
 
 
@@ -2385,16 +2376,28 @@ updatebot: async () => {
     await reply("💾 Creating backup before update...")
     const backup = createBackup()
 
-    const version = getVersionData()
+    const version = getVersionData() || {}
     version.rollbackAvailable = true
     version.lastBackup = backup
     saveVersionData(version)
 
-    await reply("🚀 Triggering Render deployment...")
+    await reply("📥 Pulling latest GitHub changes...")
 
-    await triggerRenderDeploy()
+    exec("git pull", async (err, stdout, stderr) => {
+      if (err) {
+        console.log(err)
+        return reply(`❌ Git pull failed:\n${err.message}`)
+      }
 
-    reply("✅ Render redeploy started successfully")
+      await reply(`✅ Git updated:\n${stdout || "Already latest"}`)
+
+      await reply("🚀 Triggering Render deployment...")
+
+      await triggerRenderDeploy()
+
+      reply("✅ Render redeploy started successfully")
+    })
+
   } catch (e) {
     console.log("UPDATEBOT ERROR:", e)
     reply(`❌ Update failed: ${e.message}`)
