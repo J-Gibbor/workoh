@@ -140,6 +140,16 @@ const addWarn = async (sock, jid, user, reason) => {
   saveWarnDB()
 }
 
+// ===== DEFAULT VERSION DATA =====
+const defaultVersionData = {
+  version: "1.0.0",
+  latest: "1.0.0",
+  lastUpdate: new Date().toISOString(),
+  rollbackAvailable: false,
+  lastBackup: null,
+  backupHistory: []
+}
+
 // ===== OPTIONAL LOCAL BACKUP =====
 const BACKUP_DIR = "./backups"
 if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR)
@@ -148,22 +158,41 @@ if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR)
 const VERSION_FILE = "./version.json"
 
 const getVersionData = () => {
-  if (!fs.existsSync(VERSION_FILE)) {
-    fs.writeFileSync(
-      VERSION_FILE,
-      JSON.stringify({
-        version: process.env.BOT_VERSION || "1.0.0",
-        lastUpdate: new Date().toISOString(),
-        rollbackAvailable: false
-      }, null, 2)
-    )
-  }
+  try {
+    if (!fs.existsSync(VERSION_FILE)) {
+      fs.writeFileSync(
+        VERSION_FILE,
+        JSON.stringify(defaultVersionData, null, 2)
+      )
+      return defaultVersionData
+    }
 
-  return JSON.parse(fs.readFileSync(VERSION_FILE))
+    const raw = JSON.parse(fs.readFileSync(VERSION_FILE))
+
+    return {
+      ...defaultVersionData,
+      ...raw,
+      latest: raw.latest || raw.version || "1.0.0"
+    }
+  } catch (e) {
+    console.log("Version read error:", e)
+    return defaultVersionData
+  }
 }
 
+// ===== SAVE VERSION =====
 const saveVersionData = (data) => {
-  fs.writeFileSync(VERSION_FILE, JSON.stringify(data, null, 2))
+  fs.writeFileSync(
+    VERSION_FILE,
+    JSON.stringify(
+      {
+        ...defaultVersionData,
+        ...data
+      },
+      null,
+      2
+    )
+  )
 }
 
 // const BOT_VERSION = {
@@ -200,44 +229,64 @@ const triggerRenderDeploy = async () => {
 
 
 // ===== LOCAL BACKUP =====
+// FULL BACKUP
 const createBackup = () => {
-  const timestamp = Date.now()
-  const backupPath = `${BACKUP_DIR}/backup-${timestamp}.json`
+  try {
+    const timestamp = Date.now()
+    const backupPath = `${BACKUP_DIR}/backup-${timestamp}.zip`
 
-  const snapshot = {
-    owners: BOT_OWNERS,
-    settings: SETTINGS,
-    groupSettings: GROUP_SETTINGS,
-    timestamp
+    // 🔥 Windows-safe fallback
+    execSync(
+      process.platform === "win32"
+        ? `powershell Compress-Archive -Path * -DestinationPath "${backupPath}" -Force`
+        : `zip -r "${backupPath}" . -x "node_modules/*" ".git/*" "backups/*"`
+    )
+
+    const version = getVersionData()
+
+    version.rollbackAvailable = true
+    version.lastBackup = backupPath
+
+    if (!version.backupHistory) version.backupHistory = []
+
+    version.backupHistory.unshift({
+      path: backupPath,
+      time: timestamp
+    })
+
+    // Keep only latest 5 backups
+    version.backupHistory = version.backupHistory.slice(0, 5)
+
+    saveVersionData(version)
+
+    return backupPath
+  } catch (e) {
+    console.log("Backup error:", e)
+    return null
   }
-
-  fs.writeFileSync(backupPath, JSON.stringify(snapshot, null, 2))
-
-  return backupPath
 }
 
 // ===== RESTORE LAST BACKUP =====
 const restoreLatestBackup = () => {
-  const files = fs.readdirSync(BACKUP_DIR)
-    .filter(f => f.endsWith(".json"))
-    .sort()
+  try {
+    const version = getVersionData()
 
-  if (!files.length) return null
+    if (!version.lastBackup || !fs.existsSync(version.lastBackup)) {
+      return null
+    }
 
-  const latest = files[files.length - 1]
-  const data = JSON.parse(
-    fs.readFileSync(`${BACKUP_DIR}/${latest}`)
-  )
+    // Windows-safe restore
+    execSync(
+      process.platform === "win32"
+        ? `powershell Expand-Archive -Path "${version.lastBackup}" -DestinationPath "." -Force`
+        : `unzip -o "${version.lastBackup}" -d .`
+    )
 
-  BOT_OWNERS = data.owners || BOT_OWNERS
-  SETTINGS = data.settings || SETTINGS
-  GROUP_SETTINGS = data.groupSettings || GROUP_SETTINGS
-
-  saveOwners()
-  saveSettings()
-  saveGroupSettings()
-
-  return latest
+    return version.lastBackup
+  } catch (e) {
+    console.log("Restore error:", e)
+    return null
+  }
 }
 
 // // 🔥 LATEST VERSION (change this when you update bot)
@@ -2353,17 +2402,32 @@ rollbackbot: async () => {
   if (!isOwner) return reply("❌ Owner only")
 
   try {
+    const version = getVersionData()
+
+    if (!version.rollbackAvailable || !version.lastBackup) {
+      return reply("❌ Rollback unavailable — no backup found")
+    }
+
+    await reply("♻️ Restoring latest backup...")
+
     const restored = restoreLatestBackup()
 
     if (!restored) {
-      return reply("❌ No backup available")
+      return reply("❌ Backup restore failed")
     }
 
-    reply(`✅ Rollback restored:\n${restored}\n♻️ Restarting...`)
+    version.version = "rollback-restored"
+    version.lastUpdate = new Date().toISOString()
 
-    process.exit(0)
+    saveVersionData(version)
+
+    await reply(`✅ Rollback restored successfully:\n${restored}`)
+
+    // 🔥 Render-safe reboot
+    setTimeout(() => process.exit(0), 3000)
+
   } catch (e) {
-    console.log(e)
+    console.log("ROLLBACK ERROR:", e)
     reply("❌ Rollback failed")
   }
 },
@@ -2374,28 +2438,37 @@ updatebot: async () => {
 
   try {
     await reply("💾 Creating backup before update...")
+
     const backup = createBackup()
 
-    const version = getVersionData() || {}
+    if (!backup) {
+      return reply("❌ Backup failed — update cancelled")
+    }
+
+    await reply(`✅ Backup created:\n${backup}`)
+
+    const version = getVersionData()
+
     version.rollbackAvailable = true
     version.lastBackup = backup
-    saveVersionData(version)
 
-    await reply("📥 Pulling latest GitHub changes...")
+    await reply("🚀 Pulling latest GitHub update...")
 
     exec("git pull", async (err, stdout, stderr) => {
       if (err) {
         console.log(err)
-        return reply(`❌ Git pull failed:\n${err.message}`)
+        return reply("❌ Git pull failed")
       }
 
-      await reply(`✅ Git updated:\n${stdout || "Already latest"}`)
+      version.version = version.latest || version.version
+      version.lastUpdate = new Date().toISOString()
 
-      await reply("🚀 Triggering Render deployment...")
+      saveVersionData(version)
 
-      await triggerRenderDeploy()
+      await reply(`✅ Bot updated successfully\n\n${stdout || "No new updates"}`)
 
-      reply("✅ Render redeploy started successfully")
+      // 🔥 Render-safe restart
+      setTimeout(() => process.exit(0), 3000)
     })
 
   } catch (e) {
@@ -2403,6 +2476,7 @@ updatebot: async () => {
     reply(`❌ Update failed: ${e.message}`)
   }
 },
+
 
       // ===== MENU =====
       
