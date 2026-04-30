@@ -2742,6 +2742,90 @@ updatebot: async () => {
   }
 },
 
+// ============= STATUS FETCH =============
+getstatus: async () => {
+  try {
+    const quoted =
+      msg.message?.extendedTextMessage?.contextInfo?.quotedMessage ||
+      msg.message?.imageMessage?.contextInfo?.quotedMessage ||
+      msg.message?.videoMessage?.contextInfo?.quotedMessage
+
+    if (!quoted) {
+      return reply(
+        "❌ Reply to a WhatsApp status (image/video/text) with .getstatus"
+      )
+    }
+
+    // ===== STATUS TEXT =====
+    if (quoted.conversation) {
+      return reply(`📥 STATUS TEXT:\n\n${quoted.conversation}`)
+    }
+
+    if (quoted.extendedTextMessage?.text) {
+      return reply(`📥 STATUS TEXT:\n\n${quoted.extendedTextMessage.text}`)
+    }
+
+    // ===== STATUS IMAGE =====
+    if (quoted.imageMessage) {
+      const stream = await downloadContentFromMessage(
+        quoted.imageMessage,
+        "image"
+      )
+
+      let buffer = Buffer.from([])
+      for await (const chunk of stream) {
+        buffer = Buffer.concat([buffer, chunk])
+      }
+
+      await sock.sendMessage(
+        jid,
+        {
+          image: buffer,
+          caption: quoted.imageMessage.caption || "📥 Extracted status image"
+        },
+        { quoted: msg }
+      )
+
+      return
+    }
+
+    // ===== STATUS VIDEO =====
+    if (quoted.videoMessage) {
+      const stream = await downloadContentFromMessage(
+        quoted.videoMessage,
+        "video"
+      )
+
+      let buffer = Buffer.from([])
+      for await (const chunk of stream) {
+        buffer = Buffer.concat([buffer, chunk])
+      }
+
+      await sock.sendMessage(
+        jid,
+        {
+          video: buffer,
+          caption: quoted.videoMessage.caption || "📥 Extracted status video"
+        },
+        { quoted: msg }
+      )
+
+      return
+    }
+
+    return reply("❌ Unsupported status type")
+
+  } catch (e) {
+    console.log("GETSTATUS ERROR:", e)
+
+    return reply(
+`❌ Failed to extract status
+
+Reason:
+${e.message || "Unknown error"}`
+    )
+  }
+},
 
       // ===== MENU =====
       
