@@ -1199,31 +1199,72 @@ try {
 
 memesticker: async () => {
   if (!isOwner) return reply("❌ Owner only")
+
   const text = args.join(" ")
   if (!text) return reply("❌ Provide text")
 
+  // 🔥 DELETE USER COMMAND AFTER 2 SECONDS (NOT BOT RESPONSE)
+  setTimeout(async () => {
+    try {
+      await sock.sendMessage(jid, {
+        delete: {
+          remoteJid: jid,
+          fromMe: false,
+          id: msg.key.id,
+          participant: msg.key.participant || sender
+        }
+      })
+    } catch (e) {
+      console.log("Command delete failed:", e)
+    }
+  }, 2000)
+
+  // ===== SAFE TEXT WRAP =====
+  const safeText = text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+
   const svg = `
-  <svg width="512" height="512">
+  <svg width="512" height="512" xmlns="http://www.w3.org/2000/svg">
     <rect width="100%" height="100%" fill="white"/>
-    <text x="50%" y="50%" font-size="40" text-anchor="middle" fill="black">
-      ${text}
-    </text>
+    <foreignObject x="20" y="20" width="472" height="472">
+      <div xmlns="http://www.w3.org/1999/xhtml"
+        style="
+          display:flex;
+          justify-content:center;
+          align-items:center;
+          width:100%;
+          height:100%;
+          font-size:38px;
+          font-weight:bold;
+          text-align:center;
+          color:black;
+          word-wrap:break-word;
+          padding:20px;
+        ">
+        ${safeText}
+      </div>
+    </foreignObject>
   </svg>`
 
   try {
     const buffer = Buffer.from(svg)
 
     const png = await sharp(buffer, {
-      density: 300 // 🔥 IMPORTANT FIX
+      density: 300
     })
       .png()
       .toBuffer()
 
     const sticker = await createSticker(png)
 
-    await sock.sendMessage(jid, {
-      sticker
-    }, { quoted: msg })
+    // ===== SEND STICKER ONLY =====
+    await sock.sendMessage(
+      jid,
+      { sticker },
+      { quoted: msg }
+    )
 
   } catch (e) {
     console.log("MEME ERROR:", e)
