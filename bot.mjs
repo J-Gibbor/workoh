@@ -472,7 +472,7 @@ async function start(session) {
       auth: state,
       logger,
       printQRInTerminal: false,
-      markOnlineOnConnect: false,
+      markOnlineOnConnect: true,
       emitOwnEvents: true,
       syncFullHistory: false,
       browser: ["Chrome (Linux)", "Chrome", "120.0.0"],
@@ -1185,6 +1185,7 @@ await sock.sendMessage(jid, {
 //  CREATE PACK
 
 pack_create: async () => {
+  if (!isOwner) return reply("❌ Owner only")
   const name = args[0]?.toLowerCase()
 
   if (!name)
@@ -1207,6 +1208,8 @@ pack_create: async () => {
 // ADD PACK
 
 pack_add: async () => {
+  if (!isOwner) return reply("❌ Owner only")
+
   const name = args[0]?.toLowerCase()
   const emoji = args[1] || "🙂"
 
@@ -1219,29 +1222,42 @@ pack_add: async () => {
     return reply("❌ Pack not found")
   }
 
-  // Check quoted message
-  const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage
+  const quoted =
+    msg.message?.extendedTextMessage?.contextInfo?.quotedMessage
 
-  // Detect media from direct or quoted
   let media = null
   let type = null
 
+  // ===== DIRECT MESSAGE =====
   if (msg.message?.imageMessage) {
     media = msg.message.imageMessage
     type = "image"
-  } else if (msg.message?.videoMessage) {
+  } 
+  else if (msg.message?.videoMessage) {
     media = msg.message.videoMessage
     type = "video"
-  } else if (quoted?.imageMessage) {
+  } 
+  else if (msg.message?.stickerMessage) {
+    media = msg.message.stickerMessage
+    type = "sticker"
+  }
+
+  // ===== QUOTED MESSAGE =====
+  else if (quoted?.imageMessage) {
     media = quoted.imageMessage
     type = "image"
-  } else if (quoted?.videoMessage) {
+  } 
+  else if (quoted?.videoMessage) {
     media = quoted.videoMessage
     type = "video"
+  } 
+  else if (quoted?.stickerMessage) {
+    media = quoted.stickerMessage
+    type = "sticker"
   }
 
   if (!media) {
-    return reply("❌ Reply to an image or video")
+    return reply("❌ Reply to an image, video, or sticker")
   }
 
   try {
@@ -1256,7 +1272,7 @@ pack_add: async () => {
       return reply("❌ Failed to download media")
     }
 
-    // Add sticker to pack
+    // ===== SAVE TO PACK =====
     pack.stickers.push({
       type,
       emoji,
@@ -1265,16 +1281,23 @@ pack_add: async () => {
 
     saveStickerPacks()
 
-    reply(`➕ Added to *${name}* pack ${emoji}\n📦 Total stickers: ${pack.stickers.length}`)
+    return reply(
+`➕ Added to *${name}* pack ${emoji}
+
+📦 Type: ${type}
+📊 Total stickers: ${pack.stickers.length}`
+    )
+
   } catch (err) {
     console.error("PACK ADD ERROR:", err)
-    reply("❌ Failed to add sticker")
+    return reply("❌ Failed to add sticker")
   }
 },
 
 // VIEW PACKS
 
 pack_view: async () => {
+  if (!isOwner) return reply("❌ Owner only")
   const name = args[0]?.toLowerCase()
 
   if (!name)
@@ -1297,6 +1320,7 @@ pack_view: async () => {
 // LIST PACKS
 
 pack_list: async () => {
+  if (!isOwner) return reply("❌ Owner only")
   const packs = Object.keys(STICKER_PACKS)
 
   if (!packs.length)
@@ -1314,6 +1338,7 @@ pack_list: async () => {
 // DELETE PACK
 
 pack_delete: async () => {
+  if (!isOwner) return reply("❌ Owner only")
   const name = args[0]?.toLowerCase()
 
   if (!name)
@@ -1331,6 +1356,7 @@ pack_delete: async () => {
 // SEND PACK
 
 pack_send: async () => {
+  if (!isOwner) return reply("❌ Owner only")
   const name = args[0]?.toLowerCase()
 
   if (!name)
@@ -1368,7 +1394,6 @@ pack_send: async () => {
       },
 
       antibadword: async () => {
-  if (!isGroup) return reply("❌ Group only")
   if (!isAdmin && !isOwner) return reply("❌ Admin only  or Bot owner only")
 
   group_settings.antibadword = args[0] === "on"
@@ -2074,6 +2099,7 @@ approveall: async () => {
 },
 
 reject: async () => {
+  if (!isGroup) return reply("❌ Group only")
   if (!isAdmin && !isOwner) return reply("❌ Admin or Bot owner only")
   const target = normalizeJid(getTarget())
   if (!target) return reply("Mention user")
@@ -2231,6 +2257,7 @@ whoami: async () => {
 },
 
 ping: async () => {
+  if (!isOwner) return reply("❌ Owner only")
   const start = Date.now()
 
   const sent = await sock.sendMessage(jid, {
