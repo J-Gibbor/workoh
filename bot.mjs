@@ -140,78 +140,6 @@ const addWarn = async (sock, jid, user, reason) => {
   saveWarnDB()
 }
 
-// ===== DEFAULT VERSION DATA =====
-const defaultVersionData = {
-  version: "1.0.0",
-  latest: "1.0.0",
-  lastUpdate: new Date().toISOString(),
-  rollbackAvailable: false,
-  lastBackup: null,
-  backupHistory: []
-}
-
-// ===== OPTIONAL LOCAL BACKUP =====
-const BACKUP_DIR = "./backups"
-
-// ===== INIT =====
-if (!fs.existsSync(BACKUP_DIR)) {
-  fs.mkdirSync(BACKUP_DIR, { recursive: true })
-}
-
-
-// ===== VERSION FILE =====
-const VERSION_FILE = "./version.json"
-
-const getVersionData = () => {
-  try {
-    if (!fs.existsSync(VERSION_FILE)) {
-      fs.writeFileSync(
-        VERSION_FILE,
-        JSON.stringify(defaultVersionData, null, 2)
-      )
-      return defaultVersionData
-    }
-
-    const raw = JSON.parse(fs.readFileSync(VERSION_FILE))
-
-    return {
-      ...defaultVersionData,
-      ...raw,
-      latest: raw.latest || raw.version || "1.0.0"
-    }
-  } catch (e) {
-    console.log("Version read error:", e)
-    return defaultVersionData
-  }
-}
-
-// ===== SAVE VERSION =====
-const saveVersionData = (data) => {
-  fs.writeFileSync(
-    VERSION_FILE,
-    JSON.stringify(
-      {
-        ...defaultVersionData,
-        ...data
-      },
-      null,
-      2
-    )
-  )
-}
-
-// const BOT_VERSION = {
-//   version: "2.0.0",
-//   releaseDate: "2026-04-28",
-//   owner: "GIBBORLEE",
-//   changelog: [
-//     "🧠 Smart menu system upgraded",
-//     "🔐 Advanced mode control added",
-//     "🌐 Live cyber banner system",
-//     "⚡ Performance optimizations",
-//     "🛡️ Stability improvements"
-//   ]
-// }
 
 // ===== SAFE DEPLOY HOOK =====
 const triggerRenderDeploy = async () => {
@@ -231,62 +159,6 @@ const triggerRenderDeploy = async () => {
 
   return true
 }
-
-
-// ===== LOCAL BACKUP =====
-// ================= FIXED FULL BACKUP (WINDOWS + RENDER SAFE) =================
-
-export const createBackup = async () => {
-  try {
-    const backupDir = "./backups"
-
-    if (!fs.existsSync(backupDir)) {
-      fs.mkdirSync(backupDir, { recursive: true })
-    }
-
-    const fileName = `backup-${Date.now()}.zip`
-    const filePath = path.join(backupDir, fileName)
-
-    // 👉 Replace this with real backup logic (zipping, copying files, etc.)
-    fs.writeFileSync(filePath, "BOT BACKUP DATA")
-
-    // ✅ IMPORTANT: return file path
-    return filePath
-
-  } catch (err) {
-    console.log("CREATE BACKUP ERROR:", err)
-    return null
-  }
-}
-
-// ===== RESTORE LAST BACKUP =====
-const restoreLatestBackup = () => {
-  try {
-    const version = getVersionData()
-
-    if (!version.lastBackup || !fs.existsSync(version.lastBackup)) {
-      return null
-    }
-
-    // Windows-safe restore
-    execSync(
-      process.platform === "win32"
-        ? `powershell Expand-Archive -Path "${version.lastBackup}" -DestinationPath "." -Force`
-        : `unzip -o "${version.lastBackup}" -d .`
-    )
-
-    return version.lastBackup
-  } catch (e) {
-    console.log("Restore error:", e)
-    return null
-  }
-}
-
-// // 🔥 LATEST VERSION (change this when you update bot)
-// const LATEST_VERSION = "2.1.0"
-
-// // 🧠 VERSION CHECKER
-// const isOutdated = () => BOT_VERSION.version !== LATEST_VERSION
 
 
 // ==== STICKER META ====
@@ -373,16 +245,8 @@ const COMMANDS = {
   // ℹ️ INFO
   alive: "💚 Check bot status",
   whoami: "🆔 Show your WhatsApp ID",
-  version: "📦 View bot version",
   stats: "📊 Bot usage statistics",
   ping: "🏓 Check bot response speed (latency test)",
-
-  // 🛠️ BOT UPDATE
-backupbot: "💾 Create full system backup",
-backupfiles: "📂 View all saved backup files",
-extractbackup: "📦 Extract backup archive contents",
-rollbackbot: "♻️ Restore latest backup version",
-updatebot: "🚀 Update bot from GitHub safely",
 
 // 📦 STICKER PACK SYSTEM
 packcreate: "📦 Create a new sticker pack",
@@ -404,7 +268,6 @@ const groupCommands = (cmdObj) => {
     "👑 OWNER CONTROL": [],
     "🔐 MODE CONTROL": [],
     "ℹ️ INFO": [],
-    "🛠️ BOT UPDATE": []
   }
 
   for (const [cmd, desc] of Object.entries(cmdObj)) {
@@ -438,13 +301,10 @@ const groupCommands = (cmdObj) => {
       groups["🔐 MODE CONTROL"].push(line)
     }
 
-    else if (["alive", "ping", "whoami","version","stats"].includes(cmd)) {
+    else if (["alive", "ping", "whoami","stats"].includes(cmd)) {
       groups["ℹ️ INFO"].push(line)
     }
 
-    else if (["updatebot","backupbot","backupfiles","extractbackup","rollbackbot"].includes(cmd)) {
-      groups["🛠️ BOT UPDATE"].push(line)
-    }
 
 else if (["packcreate","packadd","packview","packlist","packdelete","packsend"].includes(cmd)) {
   groups["📦 STICKER PACK SYSTEM"].push(`│ .${cmd} → ${cmdObj[cmd]}`)
@@ -1782,27 +1642,6 @@ shutdown_force: async () => {
   }, 1500)
 },
 
-
-update: async () => {
-  if (!isOwner) return reply("❌ Owner only")
-
-  reply("🛠️ Pulling latest bot updates...")
-
-  exec("git pull", async (err, stdout, stderr) => {
-    if (err) {
-      console.log(err)
-      return reply("❌ Update failed")
-    }
-
-    if (stderr) {
-      console.log(stderr)
-    }
-
-    reply(`✅ Update complete:\n${stdout || "No new updates"}`)
-  })
-},
-
-
 broadcast: async () => {
   if (!isOwner) return reply("❌ Owner only")
 
@@ -2403,272 +2242,6 @@ ping: async () => {
   }, { quoted: msg })
 },
 
-// 🔥 .version
-version: async () => {
-  if (!isOwner) return reply("❌ Owner only")
-
-  try {
-    const v = getVersionData()
-
-    reply(
-`🤖 BOT VERSION INFO
-
-📌 Version: ${v.version}
-🕒 Last Update: ${v.lastUpdate}
-💾 Rollback: ${v.rollbackAvailable ? "Available" : "Unavailable"}
-🌐 Repo: ${process.env.GITHUB_REPO || "Not Set"}
-`)
-  } catch (e) {
-    console.log(e)
-    reply("❌ Failed to fetch version")
-  }
-},
-
-// 🔥 .backupbot
-backupbot: async () => {
-  if (!isOwner) return reply("❌ Owner only")
-
-  try {
-    await reply("💾 Creating full bot backup...")
-
-    const backup = await createBackup()
-
-    if (!backup) {
-      return reply("❌ Backup failed — no file returned")
-    }
-
-    if (!fs.existsSync(backup)) {
-      return reply(`❌ Backup file missing:\n${backup}`)
-    }
-
-    const stats = fs.statSync(backup)
-    const sizeMB = (stats.size / 1024 / 1024).toFixed(2)
-
-    return reply(
-`✅ FULL BOT BACKUP CREATED
-
-📦 File: ${backup}
-📏 Size: ${sizeMB} MB
-🕒 Time: ${new Date(stats.mtime).toLocaleString()}
-♻️ Status: READY`
-    )
-
-  } catch (e) {
-    console.log("BACKUP ERROR:", e)
-    return reply(`❌ Backup failed:\n${e.message || "Unknown error"}`)
-  }
-},
-
-// 🔥 .extractbackup
-extractbackup: async () => {
-  if (!isOwner) return reply("❌ Owner only")
-
-  try {
-    const version = getVersionData()
-
-    // ===== CHECK BACKUP HISTORY =====
-    if (
-      !version.backupHistory ||
-      !Array.isArray(version.backupHistory) ||
-      version.backupHistory.length === 0
-    ) {
-      return reply("❌ No backup history found")
-    }
-
-    // ===== SELECT BACKUP =====
-    // Usage:
-    // .extractbackup latest
-    // .extractbackup 2
-    const option = args[0]?.toLowerCase() || "latest"
-
-    let backupEntry
-
-    if (option === "latest") {
-      backupEntry = version.backupHistory[0]
-    } else {
-      const index = parseInt(option) - 1
-
-      if (
-        isNaN(index) ||
-        index < 0 ||
-        index >= version.backupHistory.length
-      ) {
-        return reply(
-`❌ Invalid backup number
-
-Usage:
-.extractbackup latest
-.extractbackup 1
-.extractbackup 2`
-        )
-      }
-
-      backupEntry = version.backupHistory[index]
-    }
-
-    if (!backupEntry?.path || !fs.existsSync(backupEntry.path)) {
-      return reply("❌ Backup file missing")
-    }
-
-    // ===== EXTRACT FOLDER =====
-    const extractDir = `./extracted_backup_${Date.now()}`
-
-    if (!fs.existsSync(extractDir)) {
-      fs.mkdirSync(extractDir, { recursive: true })
-    }
-
-    await reply(`📦 Extracting backup...\n${backupEntry.path}`)
-
-    // ===== WINDOWS / LINUX SAFE =====
-    exec(
-      process.platform === "win32"
-        ? `powershell Expand-Archive -Path "${backupEntry.path}" -DestinationPath "${extractDir}" -Force`
-        : `unzip -o "${backupEntry.path}" -d "${extractDir}"`,
-      async (err, stdout, stderr) => {
-        if (err) {
-          console.log("EXTRACT ERROR:", err)
-          return reply("❌ Backup extraction failed")
-        }
-
-        // ===== SEND RESULT =====
-        let files = []
-
-        try {
-          files = fs.readdirSync(extractDir)
-        } catch {}
-
-        await reply(
-`✅ Backup extracted successfully
-
-📂 Folder:
-${extractDir}
-
-📄 Files Found:
-${files.slice(0, 20).join("\n") || "No files"}
-
-⚠️ Use file manager/server access to inspect full backup`
-        )
-      }
-    )
-
-  } catch (e) {
-    console.log("EXTRACTBACKUP ERROR:", e)
-    reply(`❌ Extraction failed: ${e.message}`)
-  }
-},
-
-// ================= OPTIONAL: LIST BACKUPS =================
-backupfiles: async () => {
-  if (!isOwner) return reply("❌ Owner only")
-
-  try {
-    const version = getVersionData()
-
-    if (
-      !version.backupHistory ||
-      !version.backupHistory.length
-    ) {
-      return reply("❌ No backups available")
-    }
-
-    let text = "💾 *BACKUP HISTORY*\n\n"
-
-    version.backupHistory.forEach((b, i) => {
-      text +=
-`${i + 1}. 📦 ${b.path}
-🕒 ${new Date(b.time).toLocaleString()}
-
-`
-    })
-
-    reply(text)
-
-  } catch (e) {
-    console.log(e)
-    reply("❌ Failed to load backups")
-  }
-},
-
-// 🔥 .rollbackbot
-rollbackbot: async () => {
-  if (!isOwner) return reply("❌ Owner only")
-
-  try {
-    const version = getVersionData()
-
-    if (!version.rollbackAvailable || !version.lastBackup) {
-      return reply("❌ Rollback unavailable — no backup found")
-    }
-
-    await reply("♻️ Restoring latest backup...")
-
-    const restored = restoreLatestBackup()
-
-    if (!restored) {
-      return reply("❌ Backup restore failed")
-    }
-
-    version.version = "rollback-restored"
-    version.lastUpdate = new Date().toISOString()
-
-    saveVersionData(version)
-
-    await reply(`✅ Rollback restored successfully:\n${restored}`)
-
-    // 🔥 Render-safe reboot
-    setTimeout(() => process.exit(0), 3000)
-
-  } catch (e) {
-    console.log("ROLLBACK ERROR:", e)
-    reply("❌ Rollback failed")
-  }
-},
-
-// 🔥 .updatebot
-updatebot: async () => {
-  if (!isOwner) return reply("❌ Owner only")
-
-  try {
-    await reply("💾 Creating backup before update...")
-
-    const backup = createBackup()
-
-    if (!backup) {
-      return reply("❌ Backup failed — update cancelled")
-    }
-
-    await reply(`✅ Backup created:\n${backup}`)
-
-    const version = getVersionData()
-
-    version.rollbackAvailable = true
-    version.lastBackup = backup
-
-    await reply("🚀 Pulling latest GitHub update...")
-
-    exec("git pull", async (err, stdout, stderr) => {
-      if (err) {
-        console.log(err)
-        return reply("❌ Git pull failed")
-      }
-
-      version.version = version.latest || version.version
-      version.lastUpdate = new Date().toISOString()
-
-      saveVersionData(version)
-
-      await reply(`✅ Bot updated successfully\n\n${stdout || "No new updates"}`)
-
-      // 🔥 Render-safe restart
-      setTimeout(() => process.exit(0), 3000)
-    })
-
-  } catch (e) {
-    console.log("UPDATEBOT ERROR:", e)
-    reply(`❌ Update failed: ${e.message}`)
-  }
-},
-
 // ============= STATUS FETCH =============
 getstatus: async () => {
   if (!isOwner) return reply("❌ Owner only")
@@ -2759,17 +2332,6 @@ ${e.message || "Unknown error"}`
       
 menu: async () => {
   
-  // ===== BOT VERSION =====
-  function safeVersion(v = {}) {
-  return {
-    version: v.version || "1.0.0",
-    latest: v.latest || v.version || "1.0.0"
-  }
-}
-
-const BOT_VERSION = safeVersion(getVersionData?.())
-const isOutdated = BOT_VERSION.version !== BOT_VERSION.latest
-
 
   const header = getHeader()
   
@@ -2928,19 +2490,14 @@ ${cmds.join("\n")}
 
   text += `
 ━━━━━━━━━━━━━━━━━━━━
-📦 *BOT VERSION*
-╭───────────────╮
-│ 📌 Current: ${BOT_VERSION.version}
-│ 🆕 Latest: ${BOT_VERSION.latest}
-│ 📊 Status: ${isOutdated ? "⚠️ OUTDATED" : "✅ UP TO DATE"}
-╰───────────────╯
-
-━━━━━━━━━━━━━━━━━━━━
-
 ╔════════════════════════════╗
 ║ ✨ Clean • Smart • Powerful ✨ 
 ║   Your wish is my command 🤭   
 ╚════════════════════════════╝
+
+
+
+
 `
 
 
