@@ -2408,15 +2408,55 @@ backupbot: async () => {
   if (!isOwner) return reply("❌ Owner only")
 
   try {
+    await reply("💾 Creating full bot backup...")
+
+    // ===== CREATE BACKUP =====
     const backup = createBackup()
 
-    reply(`✅ Backup created:\n${backup}`)
+    // ===== FAILED =====
+    if (!backup || !fs.existsSync(backup)) {
+      return reply("❌ Backup failed — file not created")
+    }
+
+    // ===== SAFE FILE STATS =====
+    let stats
+    try {
+      stats = fs.statSync(backup)
+    } catch {
+      return reply(`⚠️ Backup created but file stats unavailable:\n${backup}`)
+    }
+
+    const sizeMB = (stats.size / 1024 / 1024).toFixed(2)
+
+    // ===== SUCCESS =====
+    await reply(
+`✅ FULL BOT BACKUP CREATED
+
+📦 File:
+${backup}
+
+📏 Size:
+${sizeMB} MB
+
+🕒 Time:
+${new Date(stats.mtime).toLocaleString()}
+
+♻️ Rollback available: YES`
+    )
+
   } catch (e) {
-    console.log(e)
-    reply("❌ Backup failed")
+    console.log("BACKUPBOT ERROR:", e)
+
+    await reply(
+`❌ Backup failed
+
+Reason:
+${e.message || "Unknown error"}`
+    )
   }
 },
 
+// 🔥 .extractbackup
 extractbackup: async () => {
   if (!isOwner) return reply("❌ Owner only")
 
