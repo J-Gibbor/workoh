@@ -1197,13 +1197,15 @@ try {
   }
 },
 
+// ================= FIXED MEMESTICKER (VISIBLE TEXT + AUTO DELETE COMMAND) =================
+
 memesticker: async () => {
   if (!isOwner) return reply("❌ Owner only")
 
-  const text = args.join(" ")
+  const text = args.join(" ").trim()
   if (!text) return reply("❌ Provide text")
 
-  // 🔥 DELETE USER COMMAND AFTER 2 SECONDS (NOT BOT RESPONSE)
+  // 🔥 DELETE USER COMMAND ONLY AFTER 2s
   setTimeout(async () => {
     try {
       await sock.sendMessage(jid, {
@@ -1219,39 +1221,44 @@ memesticker: async () => {
     }
   }, 2000)
 
-  // ===== SAFE TEXT WRAP =====
+  // ===== SAFE SVG ESCAPE =====
   const safeText = text
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
 
+  // ===== MULTILINE TEXT SUPPORT =====
+  const words = safeText.split(" ")
+  const lines = []
+  let line = ""
+
+  for (const word of words) {
+    if ((line + word).length > 18) {
+      lines.push(line.trim())
+      line = word + " "
+    } else {
+      line += word + " "
+    }
+  }
+
+  if (line.trim()) lines.push(line.trim())
+
+  // ===== CENTER TEXT =====
+  const textElements = lines
+    .map((l, i) => {
+      const y = 180 + (i * 55)
+      return `<text x="256" y="${y}" font-size="42" font-family="Arial" font-weight="bold" text-anchor="middle" fill="black">${l}</text>`
+    })
+    .join("")
+
   const svg = `
   <svg width="512" height="512" xmlns="http://www.w3.org/2000/svg">
     <rect width="100%" height="100%" fill="white"/>
-    <foreignObject x="20" y="20" width="472" height="472">
-      <div xmlns="http://www.w3.org/1999/xhtml"
-        style="
-          display:flex;
-          justify-content:center;
-          align-items:center;
-          width:100%;
-          height:100%;
-          font-size:38px;
-          font-weight:bold;
-          text-align:center;
-          color:black;
-          word-wrap:break-word;
-          padding:20px;
-        ">
-        ${safeText}
-      </div>
-    </foreignObject>
+    ${textElements}
   </svg>`
 
   try {
-    const buffer = Buffer.from(svg)
-
-    const png = await sharp(buffer, {
+    const png = await sharp(Buffer.from(svg), {
       density: 300
     })
       .png()
@@ -1259,7 +1266,6 @@ memesticker: async () => {
 
     const sticker = await createSticker(png)
 
-    // ===== SEND STICKER ONLY =====
     await sock.sendMessage(
       jid,
       { sticker },
