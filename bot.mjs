@@ -2470,20 +2470,30 @@ backupbot: async () => {
   try {
     await reply("💾 Creating full bot backup...")
 
-    // ===== CREATE BACKUP =====
-    const backup = createBackup()
+    // ===== ENSURE BACKUP FUNCTION EXISTS =====
+    if (typeof createBackup !== "function") {
+      throw new Error("createBackup() is not defined")
+    }
 
-    // ===== FAILED =====
-    if (!backup || !fs.existsSync(backup)) {
-      return reply("❌ Backup failed — file not created")
+    // ===== CREATE BACKUP =====
+    const backup = await createBackup()
+
+    // ===== VALIDATE RETURN =====
+    if (!backup || typeof backup !== "string") {
+      throw new Error("Backup path not returned")
+    }
+
+    // ===== CHECK FILE EXISTS =====
+    if (!fs.existsSync(backup)) {
+      throw new Error(`Backup file not found:\n${backup}`)
     }
 
     // ===== SAFE FILE STATS =====
     let stats
     try {
       stats = fs.statSync(backup)
-    } catch {
-      return reply(`⚠️ Backup created but file stats unavailable:\n${backup}`)
+    } catch (err) {
+      throw new Error(`File stats failed: ${err.message}`)
     }
 
     const sizeMB = (stats.size / 1024 / 1024).toFixed(2)
@@ -2511,7 +2521,13 @@ ${new Date(stats.mtime).toLocaleString()}
 `❌ Backup failed
 
 Reason:
-${e.message || "Unknown error"}`
+${e.message || "Unknown error"}
+
+🛠️ Fix Tips:
+• Check createBackup() exists
+• Ensure backup folder is writable
+• Confirm fs permissions
+• Check disk space`
     )
   }
 },
