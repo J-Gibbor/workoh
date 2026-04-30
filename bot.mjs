@@ -234,39 +234,68 @@ const triggerRenderDeploy = async () => {
 
 
 // ===== LOCAL BACKUP =====
-// FULL BACKUP
+// ================= FIXED FULL BACKUP (WINDOWS + RENDER SAFE) =================
+
 const createBackup = () => {
   try {
     const timestamp = Date.now()
-    const backupPath = `${BACKUP_DIR}/backup-${timestamp}.zip`
 
-    // 🔥 Windows-safe fallback
-    execSync(
-      process.platform === "win32"
-        ? `powershell Compress-Archive -Path * -DestinationPath "${backupPath}" -Force`
-        : `zip -r "${backupPath}" . -x "node_modules/*" ".git/*" "backups/*"`
+    // ===== ENSURE BACKUP FOLDER =====
+    if (!fs.existsSync(BACKUP_DIR)) {
+      fs.mkdirSync(BACKUP_DIR, { recursive: true })
+    }
+
+    const backupPath = path.resolve(
+      BACKUP_DIR,
+      `full-backup-${timestamp}.zip`
     )
 
+    // ================= WINDOWS =================
+    if (process.platform === "win32") {
+      // 🔥 Proper PowerShell syntax fix
+      execSync(
+        `powershell -NoProfile -Command "Compress-Archive -Path * -DestinationPath '${backupPath}' -Force"`,
+        { stdio: "ignore" }
+      )
+
+    // ================= LINUX / RENDER =================
+    } else {
+      execSync(
+        `zip -r "${backupPath}" . -x "node_modules/*" ".git/*" "backups/*" "*.zip"`,
+        { stdio: "ignore" }
+      )
+    }
+
+    // ===== VERIFY FILE =====
+    if (!fs.existsSync(backupPath)) {
+      throw new Error("Backup file not created")
+    }
+
+    // ===== VERSION TRACKING =====
     const version = getVersionData()
 
     version.rollbackAvailable = true
     version.lastBackup = backupPath
 
-    if (!version.backupHistory) version.backupHistory = []
+    if (!Array.isArray(version.backupHistory)) {
+      version.backupHistory = []
+    }
 
     version.backupHistory.unshift({
       path: backupPath,
-      time: timestamp
+      time: timestamp,
+      size: fs.statSync(backupPath).size
     })
 
-    // Keep only latest 5 backups
-    version.backupHistory = version.backupHistory.slice(0, 5)
+    // Keep latest 10 backups
+    version.backupHistory = version.backupHistory.slice(0, 10)
 
     saveVersionData(version)
 
     return backupPath
+
   } catch (e) {
-    console.log("Backup error:", e)
+    console.log("FULL BACKUP ERROR:", e.message)
     return null
   }
 }
