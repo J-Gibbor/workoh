@@ -2403,46 +2403,8 @@ menu: async () => {
     role = "👤 User"
   }
 
-// 📸 PROFILE PICTURE 
-
- // ===== PROFILE PICTURE FIX =====
-  let profileBuffer = null
-
-  try {
-    // First try direct profile picture
-    const ppUrl = await sock.profilePictureUrl(userJid, "image")
-
-    if (ppUrl) {
-      const response = await fetch(ppUrl)
-      const arrayBuffer = await response.arrayBuffer()
-      profileBuffer = Buffer.from(arrayBuffer)
-    }
-  } catch (err) {
-    console.log("Profile pic fetch failed:", err)
-  }
-
-  // ===== FALLBACK TO CYBER MENU IMAGE =====
-  if (!profileBuffer) {
-    try {
-      const fallbackImages = [
-        "https://files.catbox.moe/7an50c.jpg",
-        "https://files.catbox.moe/j7w0r3.jpg",
-        "https://files.catbox.moe/0f8v6t.jpg"
-      ]
-
-      const fallback =
-        fallbackImages[
-          Math.floor(Math.random() * fallbackImages.length)
-        ]
-
-      const response = await fetch(fallback)
-      const arrayBuffer = await response.arrayBuffer()
-      profileBuffer = Buffer.from(arrayBuffer)
-
-    } catch {
-      profileBuffer = null
-    }
-  }
+// 📸 RANDOM SMALL MENU IMAGE
+const randomImage = `https://picsum.photos/seed/menu${Date.now()}/500/300`
 
   // 📊 SYSTEM INFO
   const uptime = process.uptime()
@@ -2531,29 +2493,14 @@ ${cmds.join("\n")}
 ╚════════════════════════════╝
 `
  // ===== SEND MENU WITH WORKING IMAGE =====
-  if (profileBuffer) {
-    return sock.sendMessage(
-      from,
-      {
-        image: profileBuffer,
-        caption: text,
-        mentions: BOT_OWNERS
-      },
-      { quoted: msg }
-    )
-  }
-
-  // fallback to text-only if image fully fails
-  return sock.sendMessage(
-    from,
-    {
-      text,
-      mentions: BOT_OWNERS
-    },
-    { quoted: msg }
-  )
+return sock.sendMessage(from, {
+   image: { url: profilePic }, 
+   caption: text, 
+   mentions: BOT_OWNERS 
+  }, { quoted: msg }
+) 
 }
-    }
+}
     // ================= EXECUTION =================
    if (commands[cmd]) {
      try {
